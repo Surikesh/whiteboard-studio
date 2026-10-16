@@ -1,0 +1,13 @@
+{
+  "format": "tldraw-lab/v1",
+  "title": "Example diagram",
+  "nodes": [
+    { "id": "request", "label": "Request", "x": 80, "y": 180, "color": "violet" },
+    { "id": "agent", "label": "Agent", "x": 420, "y": 180, "color": "blue" },
+    { "id": "canvas", "label": "Tldraw canvas", "x": 760, "y": 180, "color": "green" }
+  ],
+  "edges": [
+    { "from": "request", "to": "agent", "label": "description" },
+    { "from": "agent", "to": "canvas", "label": "diagram spec" }
+  ]
+}

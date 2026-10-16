@@ -1,0 +1,7 @@
+@import "tailwindcss";
+@import "./workspace.css";
+@import "./styles/base.css";
+@import "./styles/shell.css";
+@import "./styles/cards.css";
+@import "./styles/assets.css";
+@import "./styles/responsive.css";

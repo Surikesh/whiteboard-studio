@@ -1,0 +1,19 @@
+{
+  "minimumGap": 32,
+  "shapeSizes": [
+    { "shape": "field-a-", "h": 65 },
+    { "shape": "field-b-", "h": 65 }
+  ],
+  "groups": [
+    { "name": "input-fields", "align": "left", "axis": "vertical", "gap": 32, "shapes": ["field-a-", "field-b-", "field-c-"] },
+    { "name": "result-fields", "align": "left", "axis": "vertical", "gap": 32, "shapes": ["result-a-", "result-b-"] }
+  ],
+  "followers": [
+    { "shape": "input-note-", "afterGroup": "input-fields", "centerOnGroup": "input-fields", "gap": 48 },
+    { "shape": "result-note-", "afterGroup": "result-fields", "centerOnGroup": "result-fields", "gap": 48 }
+  ],
+  "boundaries": [
+    { "shape": "input-boundary-", "contain": ["input-fields", "input-note-"], "paddingBottom": 80 },
+    { "shape": "result-boundary-", "contain": ["result-fields", "result-note-"], "paddingBottom": 80 }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "name": "tldraw-lab",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "setup": "node scripts/check-prereqs.mjs setup && npm ci",
+    "dev": "node scripts/check-prereqs.mjs && WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext dev",
+    "dev:share": "node scripts/share-tunnel.mjs",
+    "build": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext build",
+    "start": "npm run dev --",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "test:live": "node scripts/verify-live-diagram.mjs",
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "diagram:screenshot": "node scripts/screenshot.mjs",
+    "lab": "node scripts/lab.mjs",
+    "workspace": "node scripts/workspace.mjs",
+    "workspace:layout": "node scripts/workspace-layout.mjs",
+    "build:mac": "bash scripts/build-mac-app.sh"
+  },
+  "dependencies": {
+    "@tldraw/sync": "^5.2.5",
+    "@tldraw/sync-core": "^5.2.5",
+    "@tldraw/tlschema": "^5.2.5",
+    "@tldraw/validate": "^5.2.5",
+    "@univerjs/preset-sheets-core": "^0.25.1",
+    "@univerjs/presets": "^0.25.1",
+    "http-proxy": "^1.18.1",
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "rxjs": "^7.8.2",
+    "tldraw": "^5.2.5"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.37.1",
+    "@tailwindcss/postcss": "4.2.1",
+    "@types/http-proxy": "^1.17.17",
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitejs/plugin-rsc": "0.5.26",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.2.6",
+    "node-addon-api": "^8.9.0",
+    "node-gyp": "^13.0.1",
+    "playwright-core": "1.62.0",
+    "prettier": "3.9.10",
+    "react-server-dom-webpack": "19.2.6",
+    "tailwindcss": "4.2.1",
+    "typescript": "5.9.3",
+    "vinext": "0.0.50",
+    "vite": "8.0.13",
+    "wrangler": "4.92.0"
+  },
+  "overrides": {
+    "sharp": "^0.35.5"
+  },
+  "type": "module"
+}

@@ -1,0 +1,35 @@
+[
+  {
+    "id": "td_demo_web_architecture",
+    "title": "Demo: web app, API, queue, worker, database",
+    "project": "demo",
+    "tags": ["demo"],
+    "status": "draft",
+    "nextStep": "",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z",
+    "sourceUrl": "/diagrams/demo-web-architecture.diagram.json"
+  },
+  {
+    "id": "td_example",
+    "title": "Example diagram",
+    "project": "demo",
+    "tags": ["demo"],
+    "status": "draft",
+    "nextStep": "",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z",
+    "sourceUrl": "/diagrams/example.diagram.json"
+  },
+  {
+    "id": "td_example_validated",
+    "title": "Example diagram (validated)",
+    "project": "demo",
+    "tags": ["demo"],
+    "status": "draft",
+    "nextStep": "",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z",
+    "sourceUrl": "/diagrams/example-validated.diagram.json"
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "format": "tldraw-lab/v1",
+  "intent": "explain system structure",
+  "focusQuestion": "How does a request travel from the web app to the database?",
+  "diagramType": "architecture",
+  "title": "Demo: web app, API, queue, worker, database",
+  "nodes": [
+    { "id": "web", "label": "Web app", "x": 80, "y": 200, "kind": "asset", "assetKind": "web-host" },
+    { "id": "api", "label": "API", "x": 400, "y": 200, "kind": "asset", "assetKind": "api" },
+    { "id": "queue", "label": "Job queue", "x": 720, "y": 200, "kind": "asset", "assetKind": "queue" },
+    { "id": "worker", "label": "Worker", "x": 1040, "y": 200, "kind": "asset", "assetKind": "server" },
+    { "id": "db", "label": "Database", "x": 1360, "y": 200, "kind": "asset", "assetKind": "database" }
+  ],
+  "edges": [
+    { "from": "web", "to": "api", "label": "HTTPS" },
+    { "from": "api", "to": "queue", "label": "enqueue job" },
+    { "from": "queue", "to": "worker", "label": "deliver" },
+    { "from": "worker", "to": "db", "label": "write result" },
+    { "from": "api", "to": "db", "label": "read" }
+  ]
+}

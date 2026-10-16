@@ -1,0 +1,43 @@
+@media (max-width: 850px) {
+  .lab-shell {
+    padding: 8px;
+  }
+
+  .lab-header {
+    align-items: start;
+    gap: 10px;
+    grid-template-columns: 1fr;
+    padding: 8px 4px 12px;
+  }
+
+  .lab-actions {
+    overflow-x: auto;
+  }
+
+  .asset-buttons {
+    flex: 0 0 auto;
+  }
+
+  .lab-status {
+    display: none;
+  }
+
+  .canvas-wrap {
+    border-radius: 13px;
+  }
+}
+
+.legacy-node {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid #c9ced6;
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+}
+.legacy-node em {
+  font-size: 12px;
+  color: #6b7280;
+}
