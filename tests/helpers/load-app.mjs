@@ -30,7 +30,8 @@ export async function loadAppModule(relativePath) {
         },
       },
     ],
-    transform: { jsx: { runtime: "automatic" } },
+    // Vite inlines import.meta.env at build time; node has no such object, so mirror an empty environment.
+    transform: { jsx: { runtime: "automatic" }, define: { "import.meta.env": "{}" } },
   });
   await bundle.write({ file: path.join(outDir, file), format: "esm" });
   await bundle.close();

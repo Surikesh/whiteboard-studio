@@ -18,6 +18,9 @@ import { ComponentLibrary } from "./ui/component-library";
 import { useMainMenu } from "./ui/main-menu";
 import { WorkspaceDrawer, WorkspaceLibrary, useFilteredDocuments } from "./ui/workspace-library";
 
+// Optional tldraw license key for production use (see README "License"). Vite inlines VITE_* variables at build time.
+const TLDRAW_LICENSE_KEY: string | undefined = import.meta.env.VITE_TLDRAW_LICENSE_KEY || undefined;
+
 // Exported so the headless test harness (tests/helpers/headless-editor.mjs) builds editors from the exact production shape registry.
 export const shapeUtils = [...domainShapeUtils, SpreadsheetShapeUtil, LiveFrameUtil];
 export const collaborativeShapeUtils = [...defaultShapeUtils, ...shapeUtils];
@@ -131,6 +134,7 @@ export function TldrawLab({ initialDocumentId }: { initialDocumentId?: string } 
             <BoardSwitcherContext.Provider value={boardSwitcherContext}>
               <Tldraw
                 key={currentId}
+                licenseKey={TLDRAW_LICENSE_KEY}
                 hideUi={focusMode}
                 components={menuComponents}
                 overrides={uiOverrides}

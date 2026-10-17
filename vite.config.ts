@@ -47,6 +47,12 @@ export default defineConfig(async ({ command }): Promise<UserConfig> => {
       // share one copy when Vite optimizes the vinext and Worker graphs.
       dedupe: ["tldraw", "@tldraw/editor", "@tldraw/state", "@tldraw/state-react", "@tldraw/store", "@tldraw/tlschema", "@tldraw/utils", "@tldraw/validate"],
     },
+    // The Worker graph (rsc + ssr) pre-bundled only @tldraw/validate, inlining a second copy of @tldraw/utils next to the
+    // unbundled @tldraw/sync-core and @tldraw/tlschema; tldraw then warned about multiple library instances at startup.
+    // Pre-bundling the whole sync stack together makes the optimizer share one @tldraw/utils chunk.
+    environments: Object.fromEntries(
+      ["rsc", "ssr"].map((name) => [name, { optimizeDeps: { include: ["@tldraw/sync-core", "@tldraw/tlschema", "@tldraw/validate", "@tldraw/utils", "@tldraw/store", "@tldraw/state"] } }]),
+    ),
     plugins: [
       vinext(),
       labStoragePlugin({ projectDir: process.cwd() }),

@@ -159,10 +159,16 @@ npm test        # builds the app, then runs node --test tests/*.test.mjs
 
 The same commands run in [CI](.github/workflows/ci.yml).
 
+Browser end-to-end check, with `npm start` running in another terminal (needs Chrome or a Playwright Chromium; set `CHROME_PATH` if it is not found):
+
+```bash
+npm run test:live   # defaults to http://localhost:3000; set LIVE_BASE_URL for another port
+```
+
 ## Licensing
 
 - The code in this repository is released under the MIT License ([LICENSE](LICENSE)).
-- **tldraw is not MIT.** It is distributed under the [tldraw license](https://tldraw.dev/community/license). It is free to use for development. Running it in production needs a valid tldraw license key (there is also a hobby license with conditions, including the "made with tldraw" watermark). This project ships no key and does not remove the watermark. The app does not read a key from the environment: to use one, pass it as the `licenseKey` prop of the `<Tldraw>` component in `app/tldraw-lab.tsx`, and keep the key out of version control. If you deploy Tldraw Lab publicly or commercially, get the right license from tldraw first.
+- **tldraw is not MIT.** It is distributed under the [tldraw license](https://tldraw.dev/community/license). It is free to use for development. Running it in production needs a valid tldraw license key (there is also a hobby license with conditions, including the "made with tldraw" watermark). This project ships no key and does not remove the watermark. To use a key, put `VITE_TLDRAW_LICENSE_KEY=<your key>` in an ignored `.env.local` (all `.env*` files are git-ignored) before you build or start; it is passed as the `licenseKey` prop of `<Tldraw>`. tldraw license keys are meant to ship to the browser, so this is not a secret. If you deploy Tldraw Lab publicly or commercially, get the right license from tldraw first.
 - Other dependencies (Next.js and vinext, React, Univer, Wrangler and others) keep their own licenses.
 - Icons in `public/icons/tech` are brand marks from [Simple Icons](https://simpleicons.org/) (CC0 data). The marks remain trademarks of their owners and only label technologies. Sources are listed in `public/icons/tech/SOURCES.md`.
 - The mascot images in `public/pencil` were generated with an image generator.
