@@ -22,8 +22,8 @@ Prerequisites:
 - Optional, only for the macOS wrapper: macOS with the Xcode command line tools
 
 ```bash
-git clone <repository-url> tldraw-lab
-cd tldraw-lab
+git clone https://github.com/Surikesh/whiteboard-studio.git
+cd whiteboard-studio
 npm run setup   # checks Node and npm, then runs npm ci
 npm start       # starts the app and prints its URL
 ```
@@ -94,13 +94,22 @@ npm run workspace -- patch <id> patch.json
 npm run workspace -- open <id>           # opens the board in the default browser on macOS; add --print to only print the URL
 ```
 
-`create` needs a `tldraw-lab/v1` spec; any file in `public/diagrams` is a working sample. The board title also becomes the heading on the canvas. `patch.json` accepts `metadata`, a full replacement `spec`, or incremental `addNodes` and `addEdges`.
+`create` needs a `tldraw-lab/v1` spec; any file in `public/diagrams` is a working sample. The board title also becomes the heading on the canvas. `create` and `patch` write into the checkout (`public/diagrams/<id>.diagram.json` and `public/workspace/index.json`), so they show up in `git status`. `patch.json` accepts `metadata`, a full replacement `spec`, or incremental `addNodes` and `addEdges`, for example:
+
+```json
+{
+  "addNodes": [{ "id": "cache", "label": "Cache", "x": 480, "y": 520, "kind": "asset", "assetKind": "database" }],
+  "addEdges": [{ "from": "api", "to": "cache", "label": "read" }]
+}
+```
 
 To align a board that is already open with a layout, use the layout preflight, which drives a real tldraw `Editor` in a headless browser (needs Chrome; set `CHROME_PATH` if it is not found). The example config targets a board created from the demo spec above and changes the live board:
 
 ```bash
 npm run workspace:layout -- <id> examples/layout/compact-columns.json /tmp/layout-preflight
 ```
+
+The last argument is an output prefix, not a folder: it writes `/tmp/layout-preflight-report.json`, `/tmp/layout-preflight-overview.png` and one `/tmp/layout-preflight-<group>.png` per group. The example only checks column spacing; it does not route arrows, so labels can still overlap.
 
 ## Docs
 
@@ -119,7 +128,7 @@ None of these are needed for the walkthrough. The repository never calls a provi
 
 1. `npm run lab -- init` creates `config.json` in the data directory (`npm run lab -- config` shows it with secrets masked).
 2. Edit `config.json` (example below). Provider settings are re-read on every request, so changing them needs no restart.
-3. `npm run lab -- start` starts the app and the bridge, then prints `Local: http://127.0.0.1:4174/`. Open that bridge URL, not the app port: the bridge is the single entry point. Ports come from `share.port` (app, default 4173) and `share.bridgePort` (bridge, default 4174).
+3. `npm run lab -- start` (uses ports 4173 and 4174 by default; change `share.port` and `share.bridgePort` in `config.json` if they are taken) starts the app and the bridge, then prints `Local: http://127.0.0.1:4174/`. Open that bridge URL, not the app port: the bridge is the single entry point. Ports come from `share.port` (app, default 4173) and `share.bridgePort` (bridge, default 4174).
 4. In a second terminal run `npm run lab -- agent on`. The agent starts disabled on every launch; `npm run lab -- agent off` turns it off again.
 5. Check it: `curl http://127.0.0.1:4174/api/agent/status` returns JSON such as `"enabled":true` and `"chat":{"provider":"openai-compatible","configured":true,...}`. With no provider it shows `"provider":"none","configured":false` and the chat says so.
 
