@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { spawnSync } from "node:child_process";
+import { labBaseUrl } from "./lib/base-url.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const indexPath = resolve(root, "public/workspace/index.json");
@@ -26,7 +28,7 @@ function id() {
   return `td_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 }
 function usage() {
-  console.error("workspace: list | show <id> | create <spec.json> [--title title] [--project project] | patch <id> <patch.json> | open <id>");
+  console.error("workspace: list | show <id> | create <spec.json> [--title title] [--project project] | patch <id> <patch.json> | open <id> [--print]");
   process.exit(2);
 }
 function option(name, fallback = "") {
@@ -45,14 +47,18 @@ if (command === "list") {
 } else if (command === "create") {
   if (!args[0]) usage();
   const spec = await readJson(resolve(args[0]), null);
-  if (spec?.format !== "tldraw-lab/v1" || !Array.isArray(spec.nodes)) throw new Error("Expected a tldraw-lab/v1 spec");
+  if (spec?.format !== "tldraw-lab/v1" || !Array.isArray(spec.nodes))
+    throw new Error(
+      `Expected a tldraw-lab/v1 spec: "format" must be "tldraw-lab/v1" and "nodes" must be an array (got format=${JSON.stringify(spec?.format)}, nodes=${Array.isArray(spec?.nodes) ? "array" : typeof spec?.nodes}). Try public/diagrams/demo-web-architecture.diagram.json`,
+    );
   const documentId = id();
+  const title = option("title", spec.title || "New diagram");
   const now = new Date().toISOString();
   await mkdir(diagramsDir, { recursive: true });
-  await writeFile(resolve(diagramsDir, `${documentId}.diagram.json`), `${JSON.stringify(spec, null, 2)}\n`);
+  await writeFile(resolve(diagramsDir, `${documentId}.diagram.json`), `${JSON.stringify({ ...spec, title }, null, 2)}\n`); // the canvas heading comes from the spec title, so keep it equal to the board title
   const item = {
     id: documentId,
-    title: option("title", spec.title || "New diagram"),
+    title,
     project: option("project", "No project"),
     tags: [],
     status: "draft",
@@ -62,7 +68,7 @@ if (command === "list") {
     sourceUrl: `/diagrams/${documentId}.diagram.json`,
   };
   await saveIndex([item, ...(await index())]);
-  console.log(JSON.stringify({ id: documentId, url: `http://localhost:${process.env.TLDRAW_PORT || 4179}/d/${documentId}` }, null, 2));
+  console.log(JSON.stringify({ id: documentId, url: `${labBaseUrl()}/d/${documentId}` }, null, 2));
 } else if (command === "patch") {
   const [documentId, patchFile] = args;
   if (!documentId || !patchFile) usage();
@@ -86,10 +92,11 @@ if (command === "list") {
   await writeFile(specPath, `${JSON.stringify(nextSpec, null, 2)}\n`);
   items[at] = { ...item, ...(patch.metadata ?? {}), updatedAt: new Date().toISOString() };
   await saveIndex(items);
-  console.log(`http://localhost:${process.env.TLDRAW_PORT || 4179}/d/${documentId}`);
+  console.log(`${labBaseUrl()}/d/${documentId}`);
 } else if (command === "open") {
   const item = (await index()).find((entry) => entry.id === args[0]);
   if (!item) throw new Error(`Unknown document: ${args[0]}`);
-  const url = `http://localhost:${process.env.TLDRAW_PORT || 4179}/d/${item.id}`;
+  const url = `${labBaseUrl()}/d/${item.id}`;
   console.log(url);
+  if (process.platform === "darwin" && !args.includes("--print")) spawnSync("open", [url], { stdio: "ignore" });
 } else usage();

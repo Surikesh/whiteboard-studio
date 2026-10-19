@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import { chromium } from "playwright-core";
 import { resolve } from "node:path";
+import { labBaseUrl } from "./lib/base-url.mjs";
 
-const [url = `http://localhost:${process.env.TLDRAW_PORT ?? 4179}/`, output = "/tmp/tldraw-diagram.png"] = process.argv.slice(2);
+const [url = `${labBaseUrl()}/`, output = "/tmp/tldraw-diagram.png"] = process.argv.slice(2);
 const executablePath = process.env.CHROME_PATH || undefined; // unset: Playwright default browser
 const browser = await chromium.launch({ headless: true, executablePath });
 const page = await browser.newPage({ viewport: { width: 1920, height: 1200 }, deviceScaleFactor: 1 });

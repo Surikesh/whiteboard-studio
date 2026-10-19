@@ -16,7 +16,7 @@ A workspace has two different representations:
 This procedure shares the same hard geometry invariants as new-diagram preflight: no node overlap, no connector through an unrelated node, no hidden shared connector path, no label collision, correct bindings, and independently traceable fan-in/fan-out. Reading direction, orthogonal routing, focal count, and legend placement are grammar-aware defaults rather than universal laws.
 
 1. Preserve the user's reading direction and semantic grouping.
-2. Describe compact columns, explicit shape sizes, followers, and containing boundaries in a layout config. See `examples/layout/compact-columns.json`.
+2. Describe compact columns, explicit shape sizes, followers, and containing boundaries in a layout config. See `examples/layout/compact-columns.json`, which targets a board created from `public/diagrams/demo-web-architecture.diagram.json`. Shape tokens match a substring of the shape ID, and spec nodes become `spec-<node id>-<suffix>`.
 3. Run:
 
 ```bash

@@ -17,7 +17,7 @@ A local, realtime whiteboard for editable diagrams, built on the [tldraw SDK](ht
 
 Prerequisites:
 
-- Node.js `>=22.13.0` (`.nvmrc` pins 22; with nvm run `nvm use`)
+- Node.js 22.13 or newer (`engines` is `>=22.13.0`, so newer majors work too; `.nvmrc` pins 22 and with nvm you run `nvm use`)
 - npm 10 or newer (it ships with Node 22)
 - Optional, only for the macOS wrapper: macOS with the Xcode command line tools
 
@@ -28,7 +28,7 @@ npm run setup   # checks Node and npm, then runs npm ci
 npm start       # starts the app and prints its URL
 ```
 
-`npm run setup` stops with a message saying what to fix if Node or npm is too old. Open the printed URL (for example `http://localhost:3000/`). To use another port: `npm start -- --port 5173`.
+`npm run setup` stops with a message saying what to fix if Node or npm is too old. Open the printed URL (for example `http://localhost:3000/`). If port 3000 is busy, `npm start` picks the next free port and prints it. To choose one: `npm start -- --port 5173`. `npm ci` may print `npm audit` warnings from transitive dependencies; they do not affect the local app.
 
 Boards, config and snapshots are stored in `~/TldrawLab-data`. Set `TLDRAW_LAB_DATA_DIR` to use another folder, for example a throwaway one while trying the app.
 
@@ -81,17 +81,22 @@ Layers import in one direction: `ui` to `state` to `domain` to `io`. The browser
 
 ## Agent CLI
 
-Diagram specs live in `public/diagrams/*.diagram.json`, and the index is `public/workspace/index.json`. Documents are addressed by ID.
+The CLI keeps agent-created boards as source specs in the checkout: `public/diagrams/<id>.diagram.json` plus the index `public/workspace/index.json`, which the dev server serves to the app. The first time you open such a board, the app seeds its realtime room from the spec; after that the room, saved in the data directory, is the live copy. `patch` edits the source spec, so it only affects a board that has not been opened yet. To change an opened board, use the layout preflight below. Boards you create in the browser live only in the data directory. Documents are addressed by ID.
+
+The commands print links for the running app. They use `http://localhost:3000` by default; if `npm start` picked another port, set `TLDRAW_LAB_URL` to the URL it printed (the same variable is used by `npm run test:live`):
 
 ```bash
+export TLDRAW_LAB_URL=http://localhost:5173
 npm run workspace -- list
 npm run workspace -- show <id>
-npm run workspace -- create spec.json --title "My diagram" --project "demo"
+npm run workspace -- create public/diagrams/demo-web-architecture.diagram.json --title "My diagram" --project "demo"
 npm run workspace -- patch <id> patch.json
-npm run workspace -- open <id>
+npm run workspace -- open <id>           # opens the board in the default browser on macOS; add --print to only print the URL
 ```
 
-`patch.json` accepts `metadata`, a full replacement `spec`, or incremental `addNodes` and `addEdges`. To align an existing board with a layout, use the layout preflight, which drives a real tldraw `Editor` in a headless browser (needs Chrome, or `PLAYWRIGHT_CHROME`):
+`create` needs a `tldraw-lab/v1` spec; any file in `public/diagrams` is a working sample. The board title also becomes the heading on the canvas. `patch.json` accepts `metadata`, a full replacement `spec`, or incremental `addNodes` and `addEdges`.
+
+To align a board that is already open with a layout, use the layout preflight, which drives a real tldraw `Editor` in a headless browser (needs Chrome; set `CHROME_PATH` if it is not found). The example config targets a board created from the demo spec above and changes the live board:
 
 ```bash
 npm run workspace:layout -- <id> examples/layout/compact-columns.json /tmp/layout-preflight
@@ -144,7 +149,8 @@ Anyone with a tunnel URL can edit the board, and a Quick Tunnel is neither hosti
 - **Wrong Node or npm.** `npm run setup` and `npm start` print what is missing. Install Node 22 and run them again.
 - **Native module errors** (for example from `sharp` or `workerd` after switching Node versions or machines): run `npm rebuild`. If that does not help, delete `node_modules` and run `npm run setup` again.
 - **Crash or odd behaviour in a copied checkout.** Install dependencies in every checkout with `npm run setup`. Reusing or copying `node_modules` from another folder is not supported.
-- **Port in use.** Pick another with `npm start -- --port 5173`. The launcher (`npm run lab -- start`) uses `share.port` from `config.json` (default 4173). A message about the inspector port 9229 being taken is harmless.
+- **Port in use.** `npm start` picks the next free port and prints it. Point the CLI and `npm run test:live` at it with `TLDRAW_LAB_URL=http://localhost:<port>`. To choose the port yourself use `npm start -- --port 5173`. The launcher (`npm run lab -- start`) takes its ports from `config.json`: `share.port` for the app (default 4173) and `share.bridgePort` for the agent bridge (default 4174). A message about the inspector port 9229 being taken is harmless.
+- **Browser console shows one `404` for `/api/agent/status`.** Plain `npm start` does not run the agent bridge, so the chat treats the 404 as "agent unavailable" and checks again only once a minute. The browser logs that failed request itself; it is harmless.
 - **"Get a license for production" watermark.** See the next section. It is expected in development.
 - **Boards look empty after switching data directories.** Boards live in the data directory, not in the checkout. Point `TLDRAW_LAB_DATA_DIR` back to the old folder.
 
@@ -162,7 +168,7 @@ The same commands run in [CI](.github/workflows/ci.yml).
 Browser end-to-end check, with `npm start` running in another terminal (needs Chrome or a Playwright Chromium; set `CHROME_PATH` if it is not found):
 
 ```bash
-npm run test:live   # defaults to http://localhost:3000; set LIVE_BASE_URL for another port
+npm run test:live   # defaults to http://localhost:3000; set TLDRAW_LAB_URL for another port
 ```
 
 ## Licensing

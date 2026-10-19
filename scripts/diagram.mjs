@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, resolve } from "node:path";
+import { labBaseUrl } from "./lib/base-url.mjs";
 
 const [command, source, destination] = process.argv.slice(2);
 if (command !== "save" || !source) {
@@ -50,5 +51,4 @@ const output = resolve(directory, `${safeName}.diagram.json`);
 await mkdir(directory, { recursive: true });
 await writeFile(output, `${JSON.stringify(spec, null, 2)}\n`);
 console.log(output);
-const port = process.env.TLDRAW_PORT ?? "4179";
-console.log(`http://localhost:${port}/?diagram=/diagrams/${encodeURIComponent(`${safeName}.diagram.json`)}`);
+console.log(`${labBaseUrl()}/?diagram=/diagrams/${encodeURIComponent(`${safeName}.diagram.json`)}`);

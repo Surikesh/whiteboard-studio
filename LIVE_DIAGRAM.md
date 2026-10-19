@@ -16,6 +16,8 @@ The system setting `prefers-reduced-motion: reduce` disables motion (the "No mot
 
 The check was done against the installed version (`node_modules/tldraw/package.json`, lockfile), its sources and the bundled API documentation/JSDoc, not against examples for another version:
 
+Paths below starting with `tldraw/src`, `@tldraw/editor/src` and `node_modules/` are upstream references inside the installed `tldraw` package ([tldraw sources](https://github.com/tldraw/tldraw)), not files of this repository.
+
 - `tldraw/src/lib/shapes/geo/GeoShapeUtil.tsx`, `getGeoShapePath.ts`: public `configure`, `getCustomDisplayValues`, `customGeoTypes` exist. The latter extends the outline but does not provide a per-instance multi-layer renderer with different face fills; changing display values does not add layers either. Configuring the standard util affects the registration of `geo` as a whole.
 - `@tldraw/editor/src/lib/components/default-components/DefaultShapeWrapper.tsx` and `EditorComponentsContext.tsx`: public `components.ShapeWrapper`, a required ref, and the standard attributes/children. Suitable for a non-persisted animation layer; it does not take part in export on its own.
 - `tldraw/src/index.ts`, `lib/shapes/arrow/getArrowInfo.ts`, `ArrowPath.tsx`: `getArrowInfo` is public, the exact body path helper is not. For straight and arc arrows the path is reconstructed from public points and bodyArc parameters that already account for bindings/arrowheads. The hand-drawn stroke is not copied: the marker follows its geometric axis.
@@ -51,7 +53,7 @@ Pulses are SVG `animateMotion`, activity is CSS opacity, with no RAF updates to 
 On a running local dev server:
 
 ```bash
-LIVE_BASE_URL=http://127.0.0.1:5198 npm run test:live
+TLDRAW_LAB_URL=http://127.0.0.1:5198 npm run test:live
 ```
 
 A local Chrome is required (the path can be set via `CHROME_PATH`). `scripts/verify-live-diagram.mjs` reads the demo and creates a **new test room** for mutations; it does not overwrite user documents or the demo content. The `td_live_test_*` test rooms are intentionally not deleted automatically.

@@ -2,6 +2,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { chromium } from "playwright-core";
+import { labBaseUrl } from "./lib/base-url.mjs";
 
 const [workspaceId, configFile, outputPrefix = "/tmp/tldraw-layout"] = process.argv.slice(2);
 if (!workspaceId || !configFile) {
@@ -14,7 +15,7 @@ const browser = await chromium.launch({
   executablePath: process.env.CHROME_PATH || process.env.PLAYWRIGHT_CHROME || undefined,
 });
 const page = await browser.newPage({ viewport: { width: 1600, height: 1200 }, deviceScaleFactor: 1 });
-await page.goto(`http://localhost:${process.env.TLDRAW_PORT ?? 4179}/d/${encodeURIComponent(workspaceId)}`);
+await page.goto(`${labBaseUrl()}/d/${encodeURIComponent(workspaceId)}`);
 await page.waitForFunction(() => window.__tldrawEditor?.getCurrentPageShapes().length > 0, null, { timeout: 20_000 });
 await page.waitForTimeout(2500);
 

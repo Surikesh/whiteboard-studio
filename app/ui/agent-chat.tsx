@@ -22,14 +22,18 @@ export function AgentChat({ roomId, getEditor, applyPatch }: { roomId: string; g
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const drag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
   const applied = useRef(new Set<string>());
+  const bridgeAbsent = useRef(false); // /api/agent/* answered 404: no bridge runs (plain `npm start`), so poll rarely
 
   const { configured, enabled, busy } = chatState(status);
   const refresh = useCallback(async () => {
     try {
-      const [statusResponse, messagesResponse] = await Promise.all([
-        fetch("/api/agent/status", { cache: "no-store" }),
-        fetch(`/api/agent/messages?roomId=${encodeURIComponent(roomId)}`, { cache: "no-store" }),
-      ]);
+      const statusResponse = await fetch("/api/agent/status", { cache: "no-store" });
+      bridgeAbsent.current = statusResponse.status === 404;
+      if (bridgeAbsent.current) {
+        setStatus(null);
+        return;
+      }
+      const messagesResponse = await fetch(`/api/agent/messages?roomId=${encodeURIComponent(roomId)}`, { cache: "no-store" });
       const status = await statusResponse.json();
       const history = await messagesResponse.json();
       setStatus(status);
@@ -46,16 +50,17 @@ export function AgentChat({ roomId, getEditor, applyPatch }: { roomId: string; g
       }
     } catch {
       setStatus(null);
-    } // bridge unreachable (agent access off or server restarting): show the chat as disabled, the 1.5 s poll retries
+    } // bridge unreachable (agent access off or server restarting): show the chat as disabled, the poll retries
   }, [roomId, applyPatch]);
 
   useEffect(() => {
-    const initial = window.setTimeout(() => void refresh(), 0);
-    const timer = window.setInterval(() => void refresh(), 1500);
-    return () => {
-      window.clearTimeout(initial);
-      window.clearInterval(timer);
+    let timer = 0;
+    const tick = async () => {
+      await refresh();
+      timer = window.setTimeout(() => void tick(), bridgeAbsent.current ? 60_000 : 1500);
     };
+    timer = window.setTimeout(() => void tick(), 0);
+    return () => window.clearTimeout(timer);
   }, [refresh]);
 
   useEffect(() => {

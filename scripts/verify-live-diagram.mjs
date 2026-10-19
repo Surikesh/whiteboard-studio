@@ -1,9 +1,10 @@
 import { chromium } from "playwright-core";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
+import { labBaseUrl } from "./lib/base-url.mjs";
 
-// Matches the URL `npm start` prints by default; override for another port or host.
-const base = process.env.LIVE_BASE_URL ?? "http://localhost:3000";
+// Matches the URL `npm start` prints by default; set TLDRAW_LAB_URL for another port or host.
+const base = labBaseUrl();
 const out = process.env.LIVE_EVIDENCE ?? "outputs/live-diagram";
 await mkdir(out, { recursive: true });
 const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_PATH || undefined });

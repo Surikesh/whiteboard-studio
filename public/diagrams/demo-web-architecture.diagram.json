@@ -6,10 +6,10 @@
   "title": "Demo: web app, API, queue, worker, database",
   "nodes": [
     { "id": "web", "label": "Web app", "x": 80, "y": 200, "kind": "asset", "assetKind": "web-host" },
-    { "id": "api", "label": "API", "x": 400, "y": 200, "kind": "asset", "assetKind": "api" },
-    { "id": "queue", "label": "Job queue", "x": 720, "y": 200, "kind": "asset", "assetKind": "queue" },
-    { "id": "worker", "label": "Worker", "x": 1040, "y": 200, "kind": "asset", "assetKind": "server" },
-    { "id": "db", "label": "Database", "x": 1360, "y": 200, "kind": "asset", "assetKind": "database" }
+    { "id": "api", "label": "API", "x": 480, "y": 200, "kind": "asset", "assetKind": "api" },
+    { "id": "queue", "label": "Job queue", "x": 880, "y": 200, "kind": "asset", "assetKind": "queue" },
+    { "id": "worker", "label": "Worker", "x": 1280, "y": 200, "kind": "asset", "assetKind": "server" },
+    { "id": "db", "label": "Database", "x": 1080, "y": 520, "kind": "asset", "assetKind": "database" }
   ],
   "edges": [
     { "from": "web", "to": "api", "label": "HTTPS" },

@@ -61,7 +61,7 @@ export function openAiCompatibleUrl(baseUrl) {
   return `${String(baseUrl).replace(/\/+$/, "")}/chat/completions`;
 }
 
-export function openAiCompatibleRequest(chat, prompt, env = process.env) {
+export function openAiCompatibleRequest(chat, prompt) {
   const key = resolveApiKey(chat);
   const headers = { "content-type": "application/json" };
   if (key) headers.authorization = `Bearer ${key}`;

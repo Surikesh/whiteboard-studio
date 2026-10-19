@@ -125,7 +125,8 @@ function shutdown(code = 0) {
     for (const child of children)
       if (child.exitCode === null) {
         try {
-          isWin ? child.kill("SIGKILL") : process.kill(-child.pid, "SIGKILL");
+          if (isWin) child.kill("SIGKILL");
+          else process.kill(-child.pid, "SIGKILL");
         } catch {
           /* gone */
         }
@@ -166,7 +167,7 @@ function pipeLogs(child, name, onLine) {
   }
 }
 
-function waitForHttp(url, timeoutMs, abortIf) {
+function waitForHttp(url, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   return new Promise((resolve, reject) => {
     const attempt = () => {

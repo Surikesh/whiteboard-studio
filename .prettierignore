@@ -14,7 +14,6 @@ package-lock.json
 public
 
 # Tool-managed hosting config
-.openai
 
 # Local agent loop state (git-ignored)
 .pi
