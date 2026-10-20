@@ -1,0 +1,25 @@
+# Home hub CI on the Omarchy runner. Same checks as .github/workflows/ci.yml
+# (GitHub ignores .gitea/, and Gitea ignores .github/ while this folder exists).
+name: omarchy
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  check:
+    runs-on: omarchy
+    timeout-minutes: 30
+    steps:
+      - name: checkout
+        run: |
+          git init -q .
+          git -c http.extraHeader="Authorization: token ${{ gitea.token }}" fetch -q --depth 1 "${{ gitea.server_url }}/${{ gitea.repository }}.git" "${{ gitea.sha }}"
+          git checkout -q FETCH_HEAD
+      - name: check
+        run: |
+          export PATH=/opt/node/v22.23.3/bin:$PATH
+          npm ci --no-audit --no-fund
+          npx tsc --noEmit
+          npm run lint
+          npm run format:check
+          npm test
