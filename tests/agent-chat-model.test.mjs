@@ -26,7 +26,7 @@ test("buddy shows only while an enabled agent works", () => {
 
 test("settings copy names real config keys and carries no secrets or owner wording", () => {
   const text = SETTINGS_SECTIONS.flatMap((section) => section.lines).join("\n");
-  for (const key of ["agent.chat.provider", "agent.chat.apiKeyEnv", "share.cloudflareTunnelToken", "TLDRAW_LAB_DATA_DIR"]) assert.ok(text.includes(key), key);
+  for (const key of ["agent.chat.provider", "agent.chat.apiKeyEnv", "share.cloudflareTunnelToken", "WHITEBOARD_STUDIO_DATA_DIR"]) assert.ok(text.includes(key), key);
   for (const provider of CHAT_PROVIDERS) assert.ok(text.includes(provider), provider);
   assert.ok("cloudflareTunnelToken" in defaultConfig.share && "apiKeyEnv" in defaultConfig.agent.chat);
   assert.equal(defaultConfig.agent.chat.provider, "none");

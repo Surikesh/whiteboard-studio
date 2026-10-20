@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# Builds the native macOS shell and installs it to ~/Applications/Tldraw Lab.app.
+# Builds the native macOS shell and installs it to ~/Applications/Whiteboard Studio.app.
 set -euo pipefail
 
 readonly PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-readonly SRC="$PROJECT_DIR/macos/TldrawLab"
-readonly APP="${TLDRAW_APP_PATH:-$HOME/Applications/Tldraw Lab.app}"
-readonly BUNDLE_ID="${BUNDLE_ID:-com.example.tldraw-lab.app}"
+readonly SRC="$PROJECT_DIR/macos/WhiteboardStudio"
+readonly APP="${WHITEBOARD_STUDIO_APP_PATH:-$HOME/Applications/Whiteboard Studio.app}"
+readonly BUNDLE_ID="${BUNDLE_ID:-com.example.whiteboard-studio.app}"
 readonly WORK="$SRC/.build/app"
 
 swift build --package-path "$SRC" -c release
 
 rm -rf "$WORK"
-mkdir -p "$WORK/Tldraw Lab.app/Contents/MacOS" "$WORK/Tldraw Lab.app/Contents/Resources"
-readonly STAGED="$WORK/Tldraw Lab.app"
-cp "$SRC/.build/release/TldrawLab" "$STAGED/Contents/MacOS/TldrawLab"
+mkdir -p "$WORK/Whiteboard Studio.app/Contents/MacOS" "$WORK/Whiteboard Studio.app/Contents/Resources"
+readonly STAGED="$WORK/Whiteboard Studio.app"
+cp "$SRC/.build/release/WhiteboardStudio" "$STAGED/Contents/MacOS/WhiteboardStudio"
 sed "s|__PROJECT_DIR__|$PROJECT_DIR|" "$SRC/Info.plist" > "$STAGED/Contents/Info.plist"
 # Apply the bundle id at build time (overridable via BUNDLE_ID).
 /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$STAGED/Contents/Info.plist"

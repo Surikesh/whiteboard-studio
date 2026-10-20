@@ -9,7 +9,7 @@ const boxProps = {
   h: T.number,
 };
 
-// Keep this schema aligned with the custom ShapeUtils in app/tldraw-lab.tsx.
+// Keep this schema aligned with the custom ShapeUtils in app/whiteboard-studio.tsx.
 const schema = createTLSchema({
   shapes: {
     ...defaultShapeSchemas,
@@ -28,10 +28,6 @@ const schema = createTLSchema({
       },
     },
     "diagram-asset": { props: { ...boxProps, kind: T.string, label: T.string } },
-    // Legacy: boards saved before the ontology template was removed.
-    "ontology-node": {
-      props: { ...boxProps, kind: T.string, label: T.string, properties: T.string },
-    },
     spreadsheet: {
       props: { ...boxProps, title: T.string, workbook: T.string, previewZoom: T.optional(T.number) },
     },

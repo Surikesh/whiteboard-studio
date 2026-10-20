@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tldraw Lab",
-  description: "A lab for collaborative diagram creation with the Tldraw SDK.",
+  title: "Whiteboard Studio",
+  description: "A local, realtime whiteboard for editable diagrams, built on the tldraw SDK.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

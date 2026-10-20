@@ -3,12 +3,12 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
 // Layering: ui -> state -> domain -> io, resolved against real files.
-// Root files of app/ (tldraw-lab.tsx, live-diagram*, spreadsheet-shape.tsx, agent-chat-model.mjs, asset-kinds.ts shim,
+// Root files of app/ (whiteboard-studio.tsx, live-diagram*, spreadsheet-shape.tsx, agent-chat-model.mjs, asset-kinds.ts shim,
 // layout/page/loader) form the shell zone: only ui and the shell itself may use them, and no lower layer may import them.
 const app = "./app";
 const shell = [
-  "./app/tldraw-lab.tsx",
-  "./app/tldraw-lab-loader.tsx",
+  "./app/whiteboard-studio.tsx",
+  "./app/whiteboard-studio-loader.tsx",
   "./app/live-diagram.tsx",
   "./app/live-diagram-schema.ts",
   "./app/spreadsheet-shape.tsx",

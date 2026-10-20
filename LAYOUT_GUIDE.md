@@ -1,6 +1,6 @@
 # Diagram layout guide
 
-These rules are the default contract for agent-generated Tldraw Lab diagrams. Apply them with [DIAGRAM_ROUTER.md](DIAGRAM_ROUTER.md) and the mandatory icon-led language in [VISUAL_STYLE_GUIDE.md](VISUAL_STYLE_GUIDE.md). Tldraw's `Editor.alignShapes`, `stackShapes`, and related transforms clean up existing selections; source specs should still start with deliberate coordinates.
+These rules are the default contract for agent-generated Whiteboard Studio diagrams. Apply them with [DIAGRAM_ROUTER.md](DIAGRAM_ROUTER.md) and the mandatory icon-led language in [VISUAL_STYLE_GUIDE.md](VISUAL_STYLE_GUIDE.md). Tldraw's `Editor.alignShapes`, `stackShapes`, and related transforms clean up existing selections; source specs should still start with deliberate coordinates.
 
 ## 1. Layout grammar and reading direction
 

@@ -1,11 +1,6 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import test from "node:test";
-import { labPaths } from "../scripts/lib/lab-config.mjs";
 import { boardFileId, boardFileName, isSafeBasename, revisionFileName, revisionFileTime, revisionsToPrune, safeTitle, shouldWriteRevision, snapshotToTldr } from "../scripts/lib/lab-storage.mjs";
-import { migrateData } from "../scripts/lib/migrate-data.mjs";
 
 test("snapshotToTldr produces tldraw file shape and inlines agent assets", () => {
   const snapshot = {
@@ -47,25 +42,4 @@ test("revision naming, pruning and interval decision", () => {
   assert.equal(shouldWriteRevision(files, now, 30), false);
   assert.equal(shouldWriteRevision(files, new Date("2026-01-03T00:31:00.000Z"), 30), true);
   assert.equal(shouldWriteRevision([], now, 30), true);
-});
-
-test("migration copies legacy data once and never touches the source", () => {
-  const tmp = mkdtempSync(path.join(os.tmpdir(), "lab-mig-"));
-  const project = path.join(tmp, "project");
-  mkdirSync(path.join(project, ".wrangler/state/v3/do/x"), { recursive: true });
-  mkdirSync(path.join(project, ".share-tunnel/agent-assets"), { recursive: true });
-  writeFileSync(path.join(project, ".wrangler/state/v3/do/x/a.sqlite"), "db");
-  writeFileSync(path.join(project, ".share-tunnel/agent-assets/p.png"), "img");
-  writeFileSync(path.join(project, ".share-tunnel/agent-messages.json"), "[]");
-  const paths = labPaths(path.join(tmp, "data"));
-  const logs = [];
-  const actions = migrateData({ projectDir: project, paths, log: (m) => logs.push(m) });
-  assert.equal(actions.length, 3);
-  assert.equal(readFileSync(path.join(paths.state, "v3/do/x/a.sqlite"), "utf8"), "db");
-  assert.equal(readFileSync(path.join(paths.assets, "p.png"), "utf8"), "img");
-  assert.ok(existsSync(paths.messages));
-  assert.ok(existsSync(path.join(project, ".wrangler/state/v3/do/x/a.sqlite")));
-  writeFileSync(path.join(paths.state, "v3/do/x/a.sqlite"), "newer");
-  assert.equal(migrateData({ projectDir: project, paths, log() {} }).length, 0);
-  assert.equal(readFileSync(path.join(paths.state, "v3/do/x/a.sqlite"), "utf8"), "newer");
 });

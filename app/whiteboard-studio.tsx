@@ -25,7 +25,7 @@ const TLDRAW_LICENSE_KEY: string | undefined = import.meta.env.VITE_TLDRAW_LICEN
 export const shapeUtils = [...domainShapeUtils, SpreadsheetShapeUtil, LiveFrameUtil];
 export const collaborativeShapeUtils = [...defaultShapeUtils, ...shapeUtils];
 
-export function TldrawLab({ initialDocumentId }: { initialDocumentId?: string } = {}) {
+export function WhiteboardStudio({ initialDocumentId }: { initialDocumentId?: string } = {}) {
   const status = useSaveStatus();
   const { saved, setSaved } = status;
   const workspace = useWorkspace({ initialDocumentId, status });
@@ -129,7 +129,7 @@ export function TldrawLab({ initialDocumentId }: { initialDocumentId?: string } 
       )}
 
       {currentId && (
-        <section className="canvas-wrap" aria-label="Interactive Tldraw canvas">
+        <section className="canvas-wrap" aria-label="Interactive Whiteboard canvas">
           <LivePlaybackContext.Provider value={playback.playing}>
             <BoardSwitcherContext.Provider value={boardSwitcherContext}>
               <Tldraw

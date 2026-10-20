@@ -1,7 +1,7 @@
 import { editableTextBoxHeight } from "../shapes/text-height";
 
 export type DiagramSpec = {
-  format: "tldraw-lab/v1";
+  format: "whiteboard-studio/v1";
   title?: string;
   intent?: string;
   focusQuestion?: string;
@@ -34,7 +34,7 @@ export type DiagramSpec = {
 export function isDiagramSpec(value: unknown): value is DiagramSpec {
   if (!value || typeof value !== "object") return false;
   const spec = value as Partial<DiagramSpec>;
-  if (spec.format !== "tldraw-lab/v1" || !Array.isArray(spec.nodes)) return false;
+  if (spec.format !== "whiteboard-studio/v1" || !Array.isArray(spec.nodes)) return false;
   if (spec.diagramType !== "sequence") return true;
   return Boolean(spec.sequence && Array.isArray(spec.sequence.participants) && Array.isArray(spec.sequence.messages));
 }

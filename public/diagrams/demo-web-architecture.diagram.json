@@ -1,5 +1,5 @@
 {
-  "format": "tldraw-lab/v1",
+  "format": "whiteboard-studio/v1",
   "intent": "explain system structure",
   "focusQuestion": "How does a request travel from the web app to the database?",
   "diagramType": "architecture",

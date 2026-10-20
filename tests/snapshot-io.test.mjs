@@ -6,7 +6,7 @@ import { createLabEditor } from "./helpers/headless-editor.mjs";
 
 const lab = await createLabEditor();
 const spec = {
-  format: "tldraw-lab/v1",
+  format: "whiteboard-studio/v1",
   title: "Roundtrip",
   nodes: [
     { id: "svc", label: "Svc", x: 0, y: 0, kind: "service", technology: "Go" },

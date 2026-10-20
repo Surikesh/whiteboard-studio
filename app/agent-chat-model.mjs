@@ -1,15 +1,15 @@
 // Pure state and copy for the agent chat and its settings panel (unit-tested in tests/agent-chat-model.test.mjs).
-export const OPEN_AGENT_SETTINGS_EVENT = "tldraw-lab:open-agent-settings";
+export const OPEN_AGENT_SETTINGS_EVENT = "whiteboard-studio:open-agent-settings";
 
-/** Config names only; values live in the data directory (`~/TldrawLab-data`, `TLDRAW_LAB_DATA_DIR`) or the environment, never in the repository. */
+/** Config names only; values live in the data directory (`~/WhiteboardStudio-data`, `WHITEBOARD_STUDIO_DATA_DIR`) or the environment, never in the repository. */
 export const SETTINGS_SECTIONS = [
   {
     title: "AI provider",
     lines: [
-      "Edit config.json in the Tldraw Lab data directory (default ~/TldrawLab-data, override with TLDRAW_LAB_DATA_DIR).",
+      "Edit config.json in the Whiteboard Studio data directory (default ~/WhiteboardStudio-data, override with WHITEBOARD_STUDIO_DATA_DIR).",
       "agent.chat.provider: none (default), pi, codex, claude or openai-compatible.",
       "openai-compatible also needs agent.chat.baseUrl and agent.chat.model, plus agent.chat.apiKeyEnv (the name of an environment variable that holds the key) or agent.chat.apiKey.",
-      "Optional: agent.image.provider (none or codex); TLDRAW_LAB_PI_MODEL and TLDRAW_LAB_CODEX_MODEL set default models.",
+      "Optional: agent.image.provider (none or codex); WHITEBOARD_STUDIO_PI_MODEL and WHITEBOARD_STUDIO_CODEX_MODEL set default models.",
     ],
   },
   {

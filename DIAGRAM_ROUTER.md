@@ -5,24 +5,23 @@ The embedded assistant must choose a diagram by the question it needs to answer,
 ## Decision order
 
 1. **Write the focus question.** Every diagram must answer one explicit question; return it in `focusQuestion`.
-2. **Use the lightest adequate medium.** Prefer prose for a short linear explanation and a table for repeated comparison across common criteria. Draw only when spatial structure, behavior, sequence, boundaries, branching, or relationships carry the answer. A comparison that is best as a table still uses Tldraw Lab's native editable `table` payload.
+2. **Use the lightest adequate medium.** Prefer prose for a short linear explanation and a table for repeated comparison across common criteria. Draw only when spatial structure, behavior, sequence, boundaries, branching, or relationships carry the answer. A comparison that is best as a table still uses Whiteboard Studio's native editable `table` payload.
 3. **Select semantic behavior.** When behavior is load-bearing, choose the nearest semantic pattern below before selecting a layout grammar. A semantic pattern adds meaning-specific primitives and constraints; it does not create a new `diagramType`.
 4. **Select exactly one explanatory grammar.** Add a new grammar only when none of the supported grammars can represent the answer without distortion.
 5. **Choose an audience/detail profile and destination**, then apply its adaptive complexity budget.
 
 ## Semantic patterns
 
-| Trigger                                        | Semantic pattern      | Nearest existing grammar      | Meaning-specific requirement                                                           |
-| ---------------------------------------------- | --------------------- | ----------------------------- | -------------------------------------------------------------------------------------- |
-| queue depth, capacity, bottleneck, fan-in      | `fan-in-bottleneck`   | `architecture` or `flowchart` | Show independently traceable producers, constrained resource, and capacity/queue fact. |
-| trust boundary, allowed/forbidden path         | `trust-boundary`      | `architecture`                | Draw editable boundaries and distinguish allowed from forbidden paths semantically.    |
-| repeated governance/control layers             | `control-layers`      | `hierarchy` or `architecture` | Keep layers ordered and show what each layer governs.                                  |
-| two evaluations with first divergence          | `paired-policy-trace` | `flowchart`                   | Align comparable steps and make the first divergence explicit.                         |
-| unstructured input becoming a durable artifact | `input-to-artifact`   | `flowchart`                   | Distinguish transformation stages from the durable output.                             |
-| reinforcing cycle with accumulated state       | `feedback-loop`       | `causal`                      | Name accumulated state and label the direction/sign of influence.                      |
-| ordered interaction between actors             | `message-sequence`    | `sequence`                    | Preserve actor order, message order, and direction.                                    |
+| Trigger                                        | Semantic pattern    | Nearest existing grammar      | Meaning-specific requirement                                                           |
+| ---------------------------------------------- | ------------------- | ----------------------------- | -------------------------------------------------------------------------------------- |
+| queue depth, capacity, bottleneck, fan-in      | `fan-in-bottleneck` | `architecture` or `flowchart` | Show independently traceable producers, constrained resource, and capacity/queue fact. |
+| trust boundary, allowed/forbidden path         | `trust-boundary`    | `architecture`                | Draw editable boundaries and distinguish allowed from forbidden paths semantically.    |
+| repeated governance/control layers             | `control-layers`    | `hierarchy` or `architecture` | Keep layers ordered and show what each layer governs.                                  |
+| unstructured input becoming a durable artifact | `input-to-artifact` | `flowchart`                   | Distinguish transformation stages from the durable output.                             |
+| reinforcing cycle with accumulated state       | `feedback-loop`     | `causal`                      | Name accumulated state and label the direction/sign of influence.                      |
+| ordered interaction between actors             | `message-sequence`  | `sequence`                    | Preserve actor order, message order, and direction.                                    |
 
-If no pattern applies, omit `semanticPattern`; do not force one. Preserve the existing `diagramType` values in `tldraw-lab/v1`.
+If no pattern applies, omit `semanticPattern`; do not force one. Preserve the existing `diagramType` values in `whiteboard-studio/v1`.
 
 ## Explanatory grammars
 
@@ -44,7 +43,7 @@ Authoring inputs may include:
 - `detail`: `simplified | balanced | faithful` (default `balanced`);
 - `destination`: `canvas | slide | document` (default `canvas`).
 
-These are routing/procedure inputs and do not require a `tldraw-lab/v1` schema change. Use the closest combined profile:
+These are routing/procedure inputs and do not require a `whiteboard-studio/v1` schema change. Use the closest combined profile:
 
 | Profile                | Primary nodes | Edges | Review behavior                   |
 | ---------------------- | ------------: | ----: | --------------------------------- |
@@ -86,7 +85,7 @@ There is no universal skin, nine-node maximum, orthogonal-routing requirement, b
 
 ```json
 {
-  "format": "tldraw-lab/v1",
+  "format": "whiteboard-studio/v1",
   "intent": "short normalized intent",
   "focusQuestion": "the single question answered by this diagram",
   "diagramType": "concept-map|flowchart|sequence|state|architecture|hierarchy|causal|argument|comparison",

@@ -1,4 +1,4 @@
-// Shared configuration for every Tldraw Lab process (dev server, agent bridge,
+// Shared configuration for every Whiteboard Studio process (dev server, agent bridge,
 // launcher, CLI). All user data lives in one directory outside the checkout so
 // that cloning, cleaning `.wrangler`, or reinstalling never loses boards.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -8,9 +8,9 @@ import path from "node:path";
 export const projectDir = path.resolve(import.meta.dirname, "..", "..");
 
 export function dataDir() {
-  const configured = process.env.TLDRAW_LAB_DATA_DIR;
+  const configured = process.env.WHITEBOARD_STUDIO_DATA_DIR;
   if (configured) return path.resolve(configured.replace(/^~(?=$|[\\/])/, os.homedir()));
-  return path.join(os.homedir(), "TldrawLab-data");
+  return path.join(os.homedir(), "WhiteboardStudio-data");
 }
 
 export function labPaths(root = dataDir()) {

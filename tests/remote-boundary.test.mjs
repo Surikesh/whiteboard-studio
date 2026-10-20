@@ -27,7 +27,7 @@ test("isRemoteRequest: any tunnel header or LAN socket is a guest; a loopback he
 
 // A stored board is one SQLite file per Durable Object room (same layout Miniflare writes).
 function writeBoard(dataDir, room, { assets = [], shapes = [] } = {}) {
-  const dir = path.join(dataDir, "state", "v3", "do", "tldraw-lab-TldrawDurableObject");
+  const dir = path.join(dataDir, "state", "v3", "do", "whiteboard-studio-TldrawDurableObject");
   mkdirSync(dir, { recursive: true });
   const db = new DatabaseSync(path.join(dir, `${room}.sqlite`));
   db.exec("CREATE TABLE IF NOT EXISTS documents (id TEXT PRIMARY KEY, state BLOB NOT NULL, lastChangedClock INTEGER NOT NULL)");
@@ -62,7 +62,7 @@ test("isSharedBoardAsset: reference by a board shape, relative or absolute src, 
   writeBoard(dataDir, "td_one", { assets: [["asset:1", `/api/agent/assets/${A}`]], shapes: ["asset:1"] });
   assert.equal(await isSharedBoardAsset(dataDir, A), true);
   // A corrupt room file fails closed for its own content only.
-  writeFileSync(path.join(dataDir, "state", "v3", "do", "tldraw-lab-TldrawDurableObject", "bad.sqlite"), "not sqlite");
+  writeFileSync(path.join(dataDir, "state", "v3", "do", "whiteboard-studio-TldrawDurableObject", "bad.sqlite"), "not sqlite");
   assert.equal(await isSharedBoardAsset(dataDir, A), true);
   assert.equal(await isSharedBoardAsset(dataDir, "nope.png"), false);
   // Agent access on: unreferenced bridge-generated names are readable (approved deviation), other names are not.
@@ -138,7 +138,7 @@ async function startBridge(t) {
   const port = await freePort();
   const appPort = await freePort(); // nothing listens: proxied requests answer 502, which proves "not handled by the bridge"
   const child = spawn(process.execPath, [path.resolve("scripts/agent-bridge.mjs")], {
-    env: { ...process.env, TLDRAW_LAB_DATA_DIR: dataDir, AGENT_BRIDGE_PORT: String(port), AGENT_BRIDGE_HOST: "127.0.0.1", TLDRAW_APP_ORIGIN: `http://127.0.0.1:${appPort}` },
+    env: { ...process.env, WHITEBOARD_STUDIO_DATA_DIR: dataDir, AGENT_BRIDGE_PORT: String(port), AGENT_BRIDGE_HOST: "127.0.0.1", WHITEBOARD_STUDIO_APP_ORIGIN: `http://127.0.0.1:${appPort}` },
     stdio: ["ignore", "pipe", "pipe"],
   });
   t.after(() => child.kill("SIGTERM"));
@@ -253,9 +253,9 @@ test("bridge: remote guests are refused on every private route while agent acces
 
 test("storage plugin: guests get no revisions and only board-referenced assets; a loopback header value is still a guest", async (t) => {
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "lab-plugin-"));
-  const previous = process.env.TLDRAW_LAB_DATA_DIR;
-  process.env.TLDRAW_LAB_DATA_DIR = dataDir;
-  t.after(() => (previous === undefined ? delete process.env.TLDRAW_LAB_DATA_DIR : (process.env.TLDRAW_LAB_DATA_DIR = previous)));
+  const previous = process.env.WHITEBOARD_STUDIO_DATA_DIR;
+  process.env.WHITEBOARD_STUDIO_DATA_DIR = dataDir;
+  t.after(() => (previous === undefined ? delete process.env.WHITEBOARD_STUDIO_DATA_DIR : (process.env.WHITEBOARD_STUDIO_DATA_DIR = previous)));
   mkdirSync(path.join(dataDir, "assets"), { recursive: true });
   mkdirSync(path.join(dataDir, "revisions", ROOM), { recursive: true });
   writeFileSync(path.join(dataDir, "assets", `${UUID}.png`), "png-bytes");

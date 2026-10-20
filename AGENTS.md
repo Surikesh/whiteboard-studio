@@ -1,4 +1,4 @@
-# Tldraw Lab Working Rules
+# Whiteboard Studio Working Rules
 
 ## Purpose
 

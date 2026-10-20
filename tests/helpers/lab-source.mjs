@@ -1,4 +1,4 @@
-// Editor source is split across app/tldraw-lab.tsx and app/domain/**, app/io/**, app/state/** and app/ui/**; source-text assertions read the union.
+// Editor source is split across app/whiteboard-studio.tsx and app/domain/**, app/io/**, app/state/** and app/ui/**; source-text assertions read the union.
 import { readFile, readdir } from "node:fs/promises";
 
 const appRoot = new URL("../../app/", import.meta.url);
@@ -11,7 +11,7 @@ async function walk(dir) {
 
 export async function readLabSource() {
   const files = [
-    new URL("tldraw-lab.tsx", appRoot),
+    new URL("whiteboard-studio.tsx", appRoot),
     ...[...(await walk(new URL("domain/", appRoot))), ...(await walk(new URL("io/", appRoot))), ...(await walk(new URL("state/", appRoot))), ...(await walk(new URL("ui/", appRoot)))].sort((a, b) =>
       a.href.localeCompare(b.href),
     ),

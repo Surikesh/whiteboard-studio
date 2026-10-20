@@ -38,7 +38,7 @@ if (mode === "run" && !existsSync(path.join(root, "node_modules", ".bin", "vinex
 }
 
 if (problems.length) {
-  console.error("Tldraw Lab prerequisite check failed:\n");
+  console.error("Whiteboard Studio prerequisite check failed:\n");
   for (const problem of problems) console.error(`  - ${problem}`);
   console.error("");
   process.exit(1);

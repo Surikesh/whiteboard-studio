@@ -26,7 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   lazy var webConfiguration: WKWebViewConfiguration = {
     let configuration = WKWebViewConfiguration()
     configuration.websiteDataStore = .default()
-    configuration.applicationNameForUserAgent = "Version/26.0 Safari/605.1.15 TldrawLab/0.2"
+    configuration.applicationNameForUserAgent = "Version/26.0 Safari/605.1.15 WhiteboardStudio/0.2"
     configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
     configuration.preferences.isElementFullscreenEnabled = true
     configuration.mediaTypesRequiringUserActionForPlayback = []
@@ -94,9 +94,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
   }
 
-  private static let appScheme = "tldrawlab"
+  private static let appScheme = "whiteboardstudio"
 
-  /// `tldrawlab://localhost:<port>/d/:id?q` → `http://localhost:<port>/d/:id?q`; only local hosts are accepted.
+  /// `whiteboardstudio://localhost:<port>/d/:id?q` → `http://localhost:<port>/d/:id?q`; only local hosts are accepted.
   private static func labURL(fromAppURL url: URL) -> URL? {
     guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
     components.scheme = "http"
@@ -140,7 +140,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     window.tabbingMode = .disallowed
     window.collectionBehavior = [.fullScreenPrimary]
     window.minSize = NSSize(width: 640, height: 420)
-    window.title = "Tldraw Lab"
+    window.title = "Whiteboard Studio"
     window.delegate = self
     content.autoresizingMask = [.width, .height]
     window.contentView = content
@@ -160,8 +160,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     tabBar.onAgent = { [weak self] in self?.agentPressed() }
     serverChanged()
 
-    window.setFrameAutosaveName("TldrawLabMain")
-    if !window.setFrameUsingName("TldrawLabMain") { window.center() }
+    window.setFrameAutosaveName("WhiteboardStudioMain")
+    if !window.setFrameUsingName("WhiteboardStudioMain") { window.center() }
   }
 
   func showWindow() {
@@ -247,7 +247,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
       selectedBoard = nil
       if boards.isEmpty {
         window.orderOut(nil)
-        window.title = "Tldraw Lab"
+        window.title = "Whiteboard Studio"
       } else {
         select(boards[min(index, boards.count - 1)])
       }

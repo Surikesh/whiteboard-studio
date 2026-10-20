@@ -10,8 +10,8 @@ if (command !== "save" || !source) {
 }
 
 const spec = JSON.parse(await readFile(resolve(source), "utf8"));
-if (spec?.format !== "tldraw-lab/v1" || !Array.isArray(spec.nodes)) {
-  throw new Error('Expected { "format": "tldraw-lab/v1", "nodes": [...] }');
+if (spec?.format !== "whiteboard-studio/v1" || !Array.isArray(spec.nodes)) {
+  throw new Error('Expected { "format": "whiteboard-studio/v1", "nodes": [...] }');
 }
 const nodeIds = new Set();
 for (const node of spec.nodes) {

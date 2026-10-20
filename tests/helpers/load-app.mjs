@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { rolldown } from "rolldown";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const outDir = path.join(root, "node_modules/.cache/tldraw-lab-tests");
+const outDir = path.join(root, "node_modules/.cache/whiteboard-studio-tests");
 
 export async function loadAppModule(relativePath) {
   mkdirSync(outDir, { recursive: true });

@@ -8,14 +8,14 @@ const lab = await createLabEditor();
 const fresh = () => lab.newEditor();
 const typeCounts = (editor) => Object.fromEntries([...Map.groupBy(editor.getCurrentPageShapes(), (shape) => shape.type)].map(([type, list]) => [type, list.length]));
 
-test("isDiagramSpec accepts only tldraw-lab/v1 specs with nodes (and a full sequence)", () => {
+test("isDiagramSpec accepts only whiteboard-studio/v1 specs with nodes (and a full sequence)", () => {
   const { isDiagramSpec } = lab.app;
-  assert.equal(isDiagramSpec({ format: "tldraw-lab/v1", nodes: [] }), true);
+  assert.equal(isDiagramSpec({ format: "whiteboard-studio/v1", nodes: [] }), true);
   assert.equal(isDiagramSpec({ format: "other", nodes: [] }), false);
-  assert.equal(isDiagramSpec({ format: "tldraw-lab/v1" }), false);
+  assert.equal(isDiagramSpec({ format: "whiteboard-studio/v1" }), false);
   assert.equal(isDiagramSpec(null), false);
-  assert.equal(isDiagramSpec({ format: "tldraw-lab/v1", nodes: [], diagramType: "sequence" }), false);
-  assert.equal(isDiagramSpec({ format: "tldraw-lab/v1", nodes: [], diagramType: "sequence", sequence: { participants: [], messages: [] } }), true);
+  assert.equal(isDiagramSpec({ format: "whiteboard-studio/v1", nodes: [], diagramType: "sequence" }), false);
+  assert.equal(isDiagramSpec({ format: "whiteboard-studio/v1", nodes: [], diagramType: "sequence", sequence: { participants: [], messages: [] } }), true);
 });
 
 test("graph loader: demo diagram becomes title, asset shapes and bound arrows", () => {
@@ -49,7 +49,7 @@ test("graph loader: example fixtures create native geo boxes with the spec label
 test("graph loader: node kinds map to service, asset (unknown kind falls back), text and divider shapes", () => {
   const editor = fresh();
   lab.app.loadDiagramSpec(editor, {
-    format: "tldraw-lab/v1",
+    format: "whiteboard-studio/v1",
     nodes: [
       { id: "svc", label: "Svc", x: 0, y: 0, kind: "service", technology: "Go" },
       { id: "old", label: "Old", x: 300, y: 0, kind: "asset", assetKind: "jira" },
@@ -68,13 +68,16 @@ test("graph loader: node kinds map to service, asset (unknown kind falls back), 
 
 test("graph loader: unknown edge endpoint throws", () => {
   const editor = fresh();
-  assert.throws(() => lab.app.loadDiagramSpec(editor, { format: "tldraw-lab/v1", nodes: [{ id: "a", label: "A", x: 0, y: 0 }], edges: [{ from: "a", to: "missing" }] }), /Unknown edge endpoint/);
+  assert.throws(
+    () => lab.app.loadDiagramSpec(editor, { format: "whiteboard-studio/v1", nodes: [{ id: "a", label: "A", x: 0, y: 0 }], edges: [{ from: "a", to: "missing" }] }),
+    /Unknown edge endpoint/,
+  );
 });
 
 test("sequence loader: participants get header, lifeline and footer; messages become arrows", () => {
   const editor = fresh();
   lab.app.loadDiagramSpec(editor, {
-    format: "tldraw-lab/v1",
+    format: "whiteboard-studio/v1",
     diagramType: "sequence",
     title: "Flow",
     nodes: [],
@@ -94,7 +97,7 @@ test("sequence loader: participants get header, lifeline and footer; messages be
 });
 
 test("sequence loader: unknown participant and self message throw", () => {
-  const base = { format: "tldraw-lab/v1", diagramType: "sequence", nodes: [] };
+  const base = { format: "whiteboard-studio/v1", diagramType: "sequence", nodes: [] };
   const participants = [
     { id: "u", label: "U" },
     { id: "s", label: "S" },
@@ -106,7 +109,7 @@ test("sequence loader: unknown participant and self message throw", () => {
 test("table loader: comparison spec becomes a (rows + header) x (columns + criterion) geo grid", () => {
   const editor = fresh();
   lab.app.loadDiagramSpec(editor, {
-    format: "tldraw-lab/v1",
+    format: "whiteboard-studio/v1",
     diagramType: "comparison",
     title: "Options",
     nodes: [],

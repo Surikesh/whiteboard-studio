@@ -1,10 +1,10 @@
-# Tldraw Lab diagram spec
+# Whiteboard Studio diagram spec
 
 Agents can create a diagram as JSON and open it in this editor without generating internal Tldraw records. First select the explanatory grammar using [DIAGRAM_ROUTER.md](DIAGRAM_ROUTER.md), apply the mandatory icon-led defaults in [VISUAL_STYLE_GUIDE.md](VISUAL_STYLE_GUIDE.md), then choose coordinates using [LAYOUT_GUIDE.md](LAYOUT_GUIDE.md). The user never needs to name the diagram type.
 
 ```json
 {
-  "format": "tldraw-lab/v1",
+  "format": "whiteboard-studio/v1",
   "intent": "explain system structure",
   "focusQuestion": "Which components exist and how do they depend on one another?",
   "diagramType": "architecture",
@@ -17,11 +17,11 @@ Agents can create a diagram as JSON and open it in this editor without generatin
 }
 ```
 
-Supported `diagramType` values: `concept-map`, `flowchart`, `sequence`, `state`, `architecture`, `hierarchy`, `causal`, `argument`, and `comparison`. Preserve these values and `tldraw-lab/v1`; semantic patterns do not create new diagram types. Comparison diagrams use an editable table payload such as `"table":{"columns":["A","B"],"rows":[{"label":"Cost","values":["Low","High"]}]}` with `nodes: []`; do not imitate tables with independent cards. Node `kind`: `asset` (default for concrete entities), `box`, `note`, `text`, `service`, `decision`, `claim`, `evidence`, or `outcome`. An `asset` node requires `assetKind`; see [VISUAL_STYLE_GUIDE.md](VISUAL_STYLE_GUIDE.md). Coordinates are canvas pixels. Optional dimensions are `w` and `h`. `service` nodes accept `technology`, `owner`, and `status` (`healthy`, `warning`, `critical`), but status cards are reserved for diagrams whose subject is operational health and are not the default representation of software. Edge `relation` may be `supports`, `opposes`, `positive`, `negative`, `yes`, or `no`; relation colors and labels remain editable.
+Supported `diagramType` values: `concept-map`, `flowchart`, `sequence`, `state`, `architecture`, `hierarchy`, `causal`, `argument`, and `comparison`. Preserve these values and `whiteboard-studio/v1`; semantic patterns do not create new diagram types. Comparison diagrams use an editable table payload such as `"table":{"columns":["A","B"],"rows":[{"label":"Cost","values":["Low","High"]}]}` with `nodes: []`; do not imitate tables with independent cards. Node `kind`: `asset` (default for concrete entities), `box`, `note`, `text`, `service`, `decision`, `claim`, `evidence`, or `outcome`. An `asset` node requires `assetKind`; see [VISUAL_STYLE_GUIDE.md](VISUAL_STYLE_GUIDE.md). Coordinates are canvas pixels. Optional dimensions are `w` and `h`. `service` nodes accept `technology`, `owner`, and `status` (`healthy`, `warning`, `critical`), but status cards are reserved for diagrams whose subject is operational health and are not the default representation of software. Edge `relation` may be `supports`, `opposes`, `positive`, `negative`, `yes`, or `no`; relation colors and labels remain editable.
 
 ## Authoring procedure (schema-compatible)
 
-Before writing the source spec, record the focus question, perform the prose/table gate, select any load-bearing `semanticPattern`, then choose the explanatory grammar and routing profile from [DIAGRAM_ROUTER.md](DIAGRAM_ROUTER.md). Also choose `audience`, `detail`, and `destination`. These values may remain authoring/evidence metadata in this slice and are not required persisted fields in `tldraw-lab/v1`.
+Before writing the source spec, record the focus question, perform the prose/table gate, select any load-bearing `semanticPattern`, then choose the explanatory grammar and routing profile from [DIAGRAM_ROUTER.md](DIAGRAM_ROUTER.md). Also choose `audience`, `detail`, and `destination`. These values may remain authoring/evidence metadata in this slice and are not required persisted fields in `whiteboard-studio/v1`.
 
 Apply the selected adaptive complexity budget as a review trigger. If the answer cannot remain readable within one view, produce an overview and one or more detail specs with stable cross-reference labels. Run the remove test before saving. For redraw/import/simplification/splitting work, accompany the specs with a fidelity ledger listing source and drawn counts plus every merge, collapse, drop, and preserved load-bearing relationship; never silently omit source content.
 
@@ -33,7 +33,7 @@ Follow [SEQUENCE_LAYOUT_GUIDE.md](SEQUENCE_LAYOUT_GUIDE.md). Sequence geometry i
 
 ```json
 {
-  "format": "tldraw-lab/v1",
+  "format": "whiteboard-studio/v1",
   "diagramType": "sequence",
   "title": "Create diagram",
   "nodes": [],
@@ -41,7 +41,7 @@ Follow [SEQUENCE_LAYOUT_GUIDE.md](SEQUENCE_LAYOUT_GUIDE.md). Sequence geometry i
     "participants": [
       { "id": "user", "label": "User", "icon": "👤" },
       { "id": "agent", "label": "Pi Agent", "icon": "✨" },
-      { "id": "lab", "label": "Tldraw Lab", "icon": "🧩" }
+      { "id": "lab", "label": "Whiteboard Studio", "icon": "🧩" }
     ],
     "messages": [
       { "from": "user", "to": "agent", "label": "Describe diagram" },

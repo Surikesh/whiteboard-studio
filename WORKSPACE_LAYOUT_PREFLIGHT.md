@@ -74,7 +74,7 @@ The realtime room remains authoritative. Read-only validation must not mutate it
 
 ## Harness surfaces
 
-- `app/tldraw-lab.tsx` exposes the mounted realtime editor as local `window.__tldrawEditor` for Playwright harness commands.
+- `app/whiteboard-studio.tsx` exposes the mounted realtime editor as local `window.__tldrawEditor` for Playwright harness commands.
 - `scripts/workspace-layout.mjs` owns realtime alignment, numeric gates, and screenshots.
 - `LAYOUT_GUIDE.md` owns visual spacing rules.
 - `VISUAL_STYLE_GUIDE.md` owns the corresponding visual preflight requirement.

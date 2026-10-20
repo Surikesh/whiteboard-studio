@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { labBaseUrl } from "./lib/base-url.mjs";
 
-// Matches the URL `npm start` prints by default; set TLDRAW_LAB_URL for another port or host.
+// Matches the URL `npm start` prints by default; set WHITEBOARD_STUDIO_URL for another port or host.
 const base = labBaseUrl();
 const out = process.env.LIVE_EVIDENCE ?? "outputs/live-diagram";
 await mkdir(out, { recursive: true });

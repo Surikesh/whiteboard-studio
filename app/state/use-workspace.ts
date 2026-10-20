@@ -141,7 +141,7 @@ export function useWorkspace({ initialDocumentId, status }: { initialDocumentId?
   // Native shell tabs and browser tabs are labelled by the page title.
   const currentTitle = current?.title;
   useEffect(() => {
-    document.title = currentTitle ? `${currentTitle} · Tldraw Lab` : currentId ? "Tldraw Lab" : "Library · Tldraw Lab";
+    document.title = currentTitle ? `${currentTitle} · Whiteboard Studio` : currentId ? "Whiteboard Studio" : "Library · Whiteboard Studio";
   }, [currentTitle, currentId]);
 
   useEffect(() => {

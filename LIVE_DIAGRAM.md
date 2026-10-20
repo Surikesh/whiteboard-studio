@@ -30,7 +30,7 @@ Paths below starting with `tldraw/src`, `@tldraw/editor/src` and `node_modules/`
 - `app/live-diagram-schema.ts`: a single props validator for the client and the Durable Object; the new schema is additive.
 - `app/live-diagram.tsx`: ShapeUtil, shared SVG frame geometry for canvas/export, the standard RichTextLabel, the animation wrapper, local playback, compact controls and the demo seed.
 - `app/live-diagram.css`: CSS pulsing, pointer-events:none for decoration, responsive controls.
-- `app/tldraw-lab.tsx`: wiring of the util, wrapper/context, demo links and the small panel.
+- `app/whiteboard-studio.tsx`: wiring of the util, wrapper/context, demo links and the small panel.
 - `worker/TldrawDurableObject.ts`: registration of the same validator for realtime persistence.
 
 Face thickness and paddings are defined in shape coordinates, without stretching the image. Resize changes w/h but not the font size. The 100×80 minimum and rich text measurement prevent shrinking the frame over its text. Text may increase the required height. Zoom scales the whole shape as usual.
@@ -53,7 +53,7 @@ Pulses are SVG `animateMotion`, activity is CSS opacity, with no RAF updates to 
 On a running local dev server:
 
 ```bash
-TLDRAW_LAB_URL=http://127.0.0.1:5198 npm run test:live
+WHITEBOARD_STUDIO_URL=http://127.0.0.1:5198 npm run test:live
 ```
 
 A local Chrome is required (the path can be set via `CHROME_PATH`). `scripts/verify-live-diagram.mjs` reads the demo and creates a **new test room** for mutations; it does not overwrite user documents or the demo content. The `td_live_test_*` test rooms are intentionally not deleted automatically.
@@ -74,6 +74,6 @@ Actually verified in headless Chrome:
 
 Artifacts: `outputs/live-diagram/{report.json,layout-report.json,desktop.png,mobile.png,reduced-motion.png,static.svg,static-export.png,static.png}`. The desktop/mobile screenshots and the static SVG/PNG were reviewed visually. The static-export screenshot shows a deliberately rotated/stretched test block, not the original demo layout. The check of the new schema only reads its real Editor; destructive alignment of existing boards was not needed.
 
-ESLint on the new files and the Impeccable detector pass. The project-wide `npx tsc --noEmit` does not pass: there are errors in pre-existing parts (`agent-chat`, `spreadsheet-shape`, generator typing in `tldraw-lab`, `roomId` in useSync, Cloudflare globals, Vite config); there are no new errors in `live-diagram*`. This is not hidden as a successful project-wide typecheck.
+ESLint on the new files and the Impeccable detector pass. The project-wide `npx tsc --noEmit` does not pass: there are errors in pre-existing parts (`agent-chat`, `spreadsheet-shape`, generator typing in `whiteboard-studio`, `roomId` in useSync, Cloudflare globals, Vite config); there are no new errors in `live-diagram*`. This is not hidden as a successful project-wide typecheck.
 
 Commit, push, deploy and external publishing were not performed.

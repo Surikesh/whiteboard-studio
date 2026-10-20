@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 
-const port = process.env.PORT ?? process.env.TLDRAW_SHARE_PORT ?? "4173";
+const port = process.env.PORT ?? process.env.WHITEBOARD_STUDIO_SHARE_PORT ?? "4173";
 const origin = `http://127.0.0.1:${port}`;
 const children = [];
 

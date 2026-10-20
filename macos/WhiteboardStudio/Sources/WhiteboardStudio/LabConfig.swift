@@ -1,6 +1,6 @@
 import Foundation
 
-/// Runtime settings. Override with `defaults write com.example.tldraw-lab.app <Key> <value>`.
+/// Runtime settings. Override with `defaults write com.example.whiteboard-studio.app <Key> <value>`.
 enum LabConfig {
   private static var defaults: UserDefaults { .standard }
 
@@ -13,9 +13,9 @@ enum LabConfig {
     return json["share"] as? [String: Any] ?? [:]
   }
 
-  /// The one effective data directory: the shell reads its config and hands the same path to the child (`TLDRAW_LAB_DATA_DIR`).
+  /// The one effective data directory: the shell reads its config and hands the same path to the child (`WHITEBOARD_STUDIO_DATA_DIR`).
   static var dataDir: String {
-    let root = defaults.string(forKey: "DataDir") ?? ProcessInfo.processInfo.environment["TLDRAW_LAB_DATA_DIR"] ?? "~/TldrawLab-data"
+    let root = defaults.string(forKey: "DataDir") ?? ProcessInfo.processInfo.environment["WHITEBOARD_STUDIO_DATA_DIR"] ?? "~/WhiteboardStudio-data"
     return (root as NSString).expandingTildeInPath
   }
 
@@ -31,7 +31,7 @@ enum LabConfig {
   /// Environment of the lab child: the effective data dir, and a PATH that starts with node's own directory so `env node` works from a GUI launch.
   static func childEnvironment(node: String) -> [String: String] {
     var env = ProcessInfo.processInfo.environment
-    env["TLDRAW_LAB_DATA_DIR"] = dataDir
+    env["WHITEBOARD_STUDIO_DATA_DIR"] = dataDir
     let nodeDir = (node as NSString).deletingLastPathComponent
     var path: [String] = []
     for dir in [nodeDir] + searchPath where !path.contains(dir) { path.append(dir) }
@@ -66,11 +66,11 @@ enum LabConfig {
   /// `share.mode` (local, lan or cloudflare); the app only starts the lab by itself in `local`.
   static var shareMode: String { shareSettings["mode"] as? String ?? "local" }
 
-  /// Checkout that holds `scripts/lab.mjs`: `TLDRAW_LAB_ROOT`, the `ProjectDir` default, or the path baked into Info.plist.
+  /// Checkout that holds `scripts/lab.mjs`: `WHITEBOARD_STUDIO_ROOT`, the `ProjectDir` default, or the path baked into Info.plist.
   static var projectDir: String {
     let plist = Bundle.main.object(forInfoDictionaryKey: "TLDLabProjectDir") as? String ?? ""
     let candidates = [
-      ProcessInfo.processInfo.environment["TLDRAW_LAB_ROOT"], defaults.string(forKey: "ProjectDir"), plist,
+      ProcessInfo.processInfo.environment["WHITEBOARD_STUDIO_ROOT"], defaults.string(forKey: "ProjectDir"), plist,
     ]
     return candidates.compactMap { $0 }.first { !$0.isEmpty && !$0.hasPrefix("__") }
       .map { ($0 as NSString).expandingTildeInPath } ?? ""

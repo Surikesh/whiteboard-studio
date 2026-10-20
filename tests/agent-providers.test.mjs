@@ -24,10 +24,10 @@ test("pi and codex argv builders", () => {
   assert.deepEqual(piArgs("hi", "m").slice(0, 3), ["-p", "--model", "m"]);
   assert.equal(chatModel({ provider: "pi", model: "" }, {}), DEFAULT_PI_MODEL);
   assert.equal(chatModel({ provider: "codex", model: "" }, {}), DEFAULT_CODEX_MODEL);
-  assert.equal(chatModel({ provider: "pi", model: "" }, { TLDRAW_LAB_PI_MODEL: "z", TLDRAW_PI_MODEL: "x" }), "z");
-  assert.equal(chatModel({ provider: "codex", model: "" }, { TLDRAW_LAB_CODEX_MODEL: "z" }), "z");
-  assert.equal(chatModel({ provider: "pi", model: "" }, { TLDRAW_PI_MODEL: "x" }), "x");
-  assert.equal(chatModel({ provider: "codex", model: "y" }, { TLDRAW_CODEX_MODEL: "x" }), "y");
+  assert.equal(chatModel({ provider: "pi", model: "" }, { WHITEBOARD_STUDIO_PI_MODEL: "z" }), "z");
+  assert.equal(chatModel({ provider: "codex", model: "" }, { WHITEBOARD_STUDIO_CODEX_MODEL: "z" }), "z");
+  assert.equal(chatModel({ provider: "pi", model: "" }, { WHITEBOARD_STUDIO_PI_MODEL: "x" }), "x");
+  assert.equal(chatModel({ provider: "codex", model: "y" }, { WHITEBOARD_STUDIO_CODEX_MODEL: "x" }), "y");
   const args = codexTextArgs("p", { model: "m", jobDir: "/j", responseFile: "/j/r.txt" });
   assert.equal(args[args.indexOf("--sandbox") + 1], "read-only");
   for (const flag of ["--ephemeral", "--skip-git-repo-check", "--output-last-message"]) assert.ok(args.includes(flag));

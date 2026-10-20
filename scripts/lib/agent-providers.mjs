@@ -2,8 +2,8 @@
 // unit-tested without spawning any model.
 import { resolveApiKey } from "./lab-config.mjs";
 
-// Neutral placeholders; override with TLDRAW_LAB_PI_MODEL / TLDRAW_LAB_CODEX_MODEL
-// (the older TLDRAW_PI_MODEL / TLDRAW_CODEX_MODEL names still work) or in the agent config.
+// Neutral placeholders; override with WHITEBOARD_STUDIO_PI_MODEL / WHITEBOARD_STUDIO_CODEX_MODEL
+// or in the agent config.
 export const DEFAULT_PI_MODEL = "openai-codex/gpt-5";
 export const DEFAULT_CODEX_MODEL = "gpt-5";
 export const CHAT_PROVIDERS = ["none", "codex", "claude", "pi", "openai-compatible"];
@@ -14,9 +14,9 @@ export function chatModel(chat, env = process.env) {
   const configured = chat.model || "";
   switch (chat.provider) {
     case "pi":
-      return configured || env.TLDRAW_LAB_PI_MODEL || env.TLDRAW_PI_MODEL || DEFAULT_PI_MODEL;
+      return configured || env.WHITEBOARD_STUDIO_PI_MODEL || DEFAULT_PI_MODEL;
     case "codex":
-      return configured || env.TLDRAW_LAB_CODEX_MODEL || env.TLDRAW_CODEX_MODEL || DEFAULT_CODEX_MODEL;
+      return configured || env.WHITEBOARD_STUDIO_CODEX_MODEL || DEFAULT_CODEX_MODEL;
     default:
       return configured;
   }
@@ -24,7 +24,7 @@ export function chatModel(chat, env = process.env) {
 
 export function imageModel(image, env = process.env) {
   if (image.provider !== "codex") return image.model || "";
-  return image.model || env.TLDRAW_LAB_CODEX_MODEL || env.TLDRAW_CODEX_MODEL || DEFAULT_CODEX_MODEL;
+  return image.model || env.WHITEBOARD_STUDIO_CODEX_MODEL || DEFAULT_CODEX_MODEL;
 }
 
 export function chatConfigured(chat) {

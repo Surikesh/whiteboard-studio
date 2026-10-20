@@ -1,6 +1,6 @@
-import { TldrawLabLoader } from "../../tldraw-lab-loader";
+import { WhiteboardStudioLoader } from "../../whiteboard-studio-loader";
 
 export default async function DocumentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <TldrawLabLoader initialDocumentId={id} />;
+  return <WhiteboardStudioLoader initialDocumentId={id} />;
 }

@@ -103,7 +103,7 @@ final class Board: NSObject, WKNavigationDelegate, WKUIDelegate, WKDownloadDeleg
 
   private func titleChanged(_ title: String?) {
     guard let title, !title.isEmpty else { return }
-    pageTitle = title.replacingOccurrences(of: " · Tldraw Lab", with: "")
+    pageTitle = title.replacingOccurrences(of: " · Whiteboard Studio", with: "")
     app?.boardChanged(self)
   }
 
@@ -182,7 +182,7 @@ final class Board: NSObject, WKNavigationDelegate, WKUIDelegate, WKDownloadDeleg
     if serverDown, let app, app.retargetToLabServer(self) { return }
     if serverDown, LabConfig.isLocal(url), retryCount < 45 {
       retryCount += 1
-      showStatus("Waiting for the Tldraw Lab server… start it with `npm run lab -- start`")
+      showStatus("Waiting for the Whiteboard Studio server… start it with `npm run lab -- start`")
       app?.serverUnavailable()
       DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
         guard let self, let webView = self.webView else { return }

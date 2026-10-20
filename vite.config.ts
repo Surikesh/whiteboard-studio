@@ -1,7 +1,6 @@
 import vinext from "vinext";
 import { defineConfig, type UserConfig } from "vite";
 import { ensureDataDirs, labPaths } from "./scripts/lib/lab-config.mjs";
-import { migrateData } from "./scripts/lib/migrate-data.mjs";
 import { labStoragePlugin } from "./scripts/lab-storage-plugin.mjs";
 
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
@@ -25,12 +24,11 @@ export default defineConfig(async ({ command }): Promise<UserConfig> => {
 
   // Durable data lives outside the checkout (see scripts/lib/lab-config.mjs).
   // Miniflare writes the Durable Object SQLite files under
-  // <state>/v3/do/tldraw-lab-TldrawDurableObject/*.sqlite.
-  // Directories and migration are only touched by the dev server, never by builds.
+  // <state>/v3/do/whiteboard-studio-TldrawDurableObject/*.sqlite.
+  // Data directories are only created by the dev server, never by builds.
   const paths = labPaths();
   if (command === "serve") {
     ensureDataDirs(paths);
-    migrateData({ projectDir: process.cwd(), paths });
   }
 
   // Wrangler snapshots its log path while the Cloudflare plugin is imported.

@@ -44,7 +44,7 @@ next-env.d.ts
 /work/
 
 # macOS shell build output
-/macos/TldrawLab/.build/
+/macos/WhiteboardStudio/.build/
 
 # build/type-check artifacts
 *.tsbuildinfo
@@ -52,10 +52,10 @@ next-env.d.ts
 # local agent loop state
 .pi/
 
-# Checkout-local runtime data. The default data dir is ~/TldrawLab-data (outside the
-# checkout); if you point TLDRAW_LAB_DATA_DIR inside the checkout, use ./data or
-# ./TldrawLab-data. These hold config.json (may contain credentials), state/, boards/,
+# Checkout-local runtime data. The default data dir is ~/WhiteboardStudio-data (outside the
+# checkout); if you point WHITEBOARD_STUDIO_DATA_DIR inside the checkout, use ./data or
+# ./WhiteboardStudio-data. These hold config.json (may contain credentials), state/, boards/,
 # revisions/, assets/ and bridge/ (chat history). Shipped demos live in public/ and are not ignored.
 /data/
-/TldrawLab-data/
-/.tldraw-lab-logs/
+/WhiteboardStudio-data/
+/.whiteboard-studio-logs/

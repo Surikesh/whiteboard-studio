@@ -4,7 +4,7 @@ import { createLabEditor, shapesOfType } from "./helpers/headless-editor.mjs";
 
 const lab = await createLabEditor();
 const spec = {
-  format: "tldraw-lab/v1",
+  format: "whiteboard-studio/v1",
   title: "Patched",
   nodes: [
     { id: "a", label: "A", x: 0, y: 0 },
@@ -42,7 +42,7 @@ test("applyPatchToEditor loads a diagram spec patch as new shapes, starting hidd
 
 test("applyPatchToEditor adds to an existing board without touching existing shapes", async () => {
   const editor = lab.newEditor();
-  lab.app.loadDiagramSpec(editor, { format: "tldraw-lab/v1", nodes: [{ id: "old", label: "Old", x: 0, y: 0 }] });
+  lab.app.loadDiagramSpec(editor, { format: "whiteboard-studio/v1", nodes: [{ id: "old", label: "Old", x: 0, y: 0 }] });
   const before = editor.getCurrentPageShapes().map((shape) => ({ id: shape.id, opacity: shape.opacity }));
   await lab.app.applyPatchToEditor(editor, { patch: spec });
   for (const shape of before) assert.equal(editor.getShape(shape.id).opacity, shape.opacity);

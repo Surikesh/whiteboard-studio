@@ -33,7 +33,7 @@ const jobsDir = paths.jobs;
 const startConfig = loadConfig(paths);
 const port = Number(process.env.AGENT_BRIDGE_PORT || startConfig.share.bridgePort || 4174);
 const host = process.env.AGENT_BRIDGE_HOST || "127.0.0.1";
-const appTarget = process.env.TLDRAW_APP_ORIGIN || `http://localhost:${startConfig.share.port || 4173}`;
+const appTarget = process.env.WHITEBOARD_STUDIO_APP_ORIGIN || `http://localhost:${startConfig.share.port || 4173}`;
 // Read per request so edits to config.json apply without restarting the bridge.
 function currentConfig() {
   try {
@@ -214,7 +214,7 @@ function extractPatch(text) {
   if (!match) return null;
   try {
     const patch = JSON.parse(match[1]);
-    return patch?.format === "tldraw-lab/v1" && Array.isArray(patch.nodes) ? patch : null;
+    return patch?.format === "whiteboard-studio/v1" && Array.isArray(patch.nodes) ? patch : null;
   } catch {
     return null;
   }

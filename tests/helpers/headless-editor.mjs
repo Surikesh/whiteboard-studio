@@ -116,7 +116,7 @@ export async function createLabEditor() {
   // Spec/IO/patch helpers are imported from their own modules; only the shape registry comes from the composition root.
   const parts = await Promise.all(
     [
-      "app/tldraw-lab.tsx",
+      "app/whiteboard-studio.tsx",
       "app/io/component-store.ts",
       "app/io/workspace-storage.ts",
       "app/io/csv.ts",

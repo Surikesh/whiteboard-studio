@@ -11,7 +11,7 @@ export const assetCatalog: Record<AssetKind, AssetCatalogEntry> = {
   queue: { label: "Queue", tone: "amber", group: "Data" },
   brain: { label: "AI / model", tone: "violet", group: "Integrations" },
   switch: { label: "Router", tone: "mint", group: "Infrastructure" },
-  form: { label: "Formal request", tone: "blue", group: "Business" },
+  form: { label: "Form", tone: "blue", group: "Business" },
   choice: { label: "Choice", tone: "amber", group: "Processes" },
   workflow: { label: "Workflow", tone: "amber", group: "Processes" },
   metrics: { label: "Metrics", tone: "blue", group: "Business" },

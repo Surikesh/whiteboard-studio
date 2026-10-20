@@ -2,9 +2,9 @@
 import PackageDescription
 
 let package = Package(
-  name: "TldrawLab",
+  name: "WhiteboardStudio",
   platforms: [.macOS(.v14)],
   targets: [
-    .executableTarget(name: "TldrawLab", path: "Sources/TldrawLab")
+    .executableTarget(name: "WhiteboardStudio", path: "Sources/WhiteboardStudio")
   ]
 )

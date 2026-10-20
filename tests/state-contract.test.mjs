@@ -49,7 +49,7 @@ function resolveRelative(file, id) {
 }
 
 test("state structure: callable composed hooks; ALL state files small, no root/UI imports or cycles", async () => {
-  const app = read("app/tldraw-lab.tsx");
+  const app = read("app/whiteboard-studio.tsx");
   for (const name of modules) {
     const exports = await requireModule(name);
     if (hooks.includes(name)) {
@@ -58,13 +58,13 @@ test("state structure: callable composed hooks; ALL state files small, no root/U
       assert.match(app, new RegExp(`\\b${hook}\\s*\\(`));
     }
   }
-  const files = [...stateFiles("app/state"), "app/tldraw-lab.tsx"],
+  const files = [...stateFiles("app/state"), "app/whiteboard-studio.tsx"],
     edges = new Map();
   for (const file of files) {
     const targets = relativeImports(file).map((id) => resolveRelative(file, id));
     if (file.startsWith("app/state/")) {
       assert.ok(read(file).trimEnd().split("\n").length <= 400, `${file} exceeds 400 lines`);
-      for (const target of targets) assert.ok(target !== "app/tldraw-lab.tsx" && target !== "app/ui" && !target.startsWith("app/ui/"), `${file} imports ${target}`);
+      for (const target of targets) assert.ok(target !== "app/whiteboard-studio.tsx" && target !== "app/ui" && !target.startsWith("app/ui/"), `${file} imports ${target}`);
     }
     edges.set(
       file,
@@ -428,7 +428,7 @@ test("menu: consumer factory handles all actions; real stable UI consumers deref
     log,
     ["old", "new"].flatMap((generation) => [...keys, "png", "svg"].map((key) => `${generation}:${key}`)),
   );
-  const app = `${read("app/tldraw-lab.tsx")}\n${read("app/ui/main-menu.tsx")}`;
+  const app = `${read("app/whiteboard-studio.tsx")}\n${read("app/ui/main-menu.tsx")}`;
   assert.equal((app.match(/createMenuActions\s*\(/g) ?? []).length, 1);
   assert.doesNotMatch(app, /menuActionsRef(?:\.current\s*=|\s*=\s*useRef\()\s*\{/);
   assert.match(app, /useEffect\(\(\)\s*=>\s*\{\s*menuActionsRef\.current\s*=\s*menuActions\s*;?\s*\}\s*\)/);

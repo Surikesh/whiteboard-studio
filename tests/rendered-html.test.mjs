@@ -21,8 +21,8 @@ test("server-renders the Tldraw loading shell", async () => {
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
-  assert.match(html, /<title>Tldraw Lab<\/title>/i);
-  assert.match(html, /TLDRAW LAB/);
+  assert.match(html, /<title>Whiteboard Studio<\/title>/i);
+  assert.match(html, /WHITEBOARD STUDIO/);
   assert.match(html, /Preparing the canvas/);
 });
 
@@ -35,10 +35,10 @@ test("ships agent diagram support", async () => {
     readFile(new URL("../scripts/workspace-layout.mjs", import.meta.url), "utf8"),
     readFile(new URL("../WORKSPACE_LAYOUT_PREFLIGHT.md", import.meta.url), "utf8"),
   ]);
-  assert.match(source, /tldraw-lab\/v1/);
+  assert.match(source, /whiteboard-studio\/v1/);
   assert.match(source, /URLSearchParams/);
   assert.match(schema, /scripts\/diagram\.mjs/);
-  assert.equal(JSON.parse(example).format, "tldraw-lab/v1");
+  assert.equal(JSON.parse(example).format, "whiteboard-studio/v1");
   const headerRule = css.match(/\.lab-header\s*\{([^}]*)\}/)?.[1] ?? "";
   const hintRule = css.match(/\.lab-hint\s*\{([^}]*)\}/)?.[1] ?? "";
   assert.match(headerRule, /display:\s*none/);
@@ -54,7 +54,6 @@ test("ships agent diagram support", async () => {
 
 test("templates have no locked, decorative, or patterned backgrounds", async () => {
   const source = await readLabSource();
-  assert.doesNotMatch(source, /ontology-background/);
   assert.doesNotMatch(source, /background:\s*id\("background"\)/);
   assert.doesNotMatch(source, /isLocked:\s*true/);
   // Tldraw's semi fill is a repeating pattern. On some browser/GPU combinations

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Tldraw Lab launcher: init / start / agent / config / doctor.
+// Whiteboard Studio launcher: init / start / agent / config / doctor.
 // Pure Node, works on macOS, Linux and Windows.
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, accessSync, constants } from "node:fs";
@@ -119,7 +119,7 @@ function killTree(child) {
 function shutdown(code = 0) {
   if (shuttingDown) return;
   shuttingDown = true;
-  console.log("\nStopping Tldraw Lab...");
+  console.log("\nStopping Whiteboard Studio...");
   for (const child of children) killTree(child);
   setTimeout(() => {
     for (const child of children)
@@ -161,7 +161,7 @@ function pipeLogs(child, name, onLine) {
       buffer = lines.pop();
       for (const line of lines) {
         onLine?.(line);
-        if (process.env.TLDRAW_LAB_VERBOSE) console.log(`[${name}] ${line}`);
+        if (process.env.WHITEBOARD_STUDIO_VERBOSE) console.log(`[${name}] ${line}`);
       }
     });
   }
@@ -203,7 +203,7 @@ async function start() {
   if (mode === "cloudflare" && !version("cloudflared")) {
     throw new Error("share.mode is cloudflare but `cloudflared` was not found in PATH. Install it: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/");
   }
-  const vinext = process.env.TLDRAW_LAB_VINEXT_BIN || localBin("vinext");
+  const vinext = process.env.WHITEBOARD_STUDIO_VINEXT_BIN || localBin("vinext");
   if (!vinext) throw new Error("vinext not found in node_modules/.bin. Run `npm install` first.");
 
   rmSync(paths.agentEnabled, { force: true }); // agent access is OFF on every launch
@@ -220,7 +220,7 @@ async function start() {
   await waitForHttp(`http://127.0.0.1:${port}/`, 180_000);
 
   const bridge = launch("bridge", process.execPath, [path.join(projectDir, "scripts", "agent-bridge.mjs")], {
-    env: { ...process.env, AGENT_BRIDGE_PORT: String(bridgePort), AGENT_BRIDGE_HOST: bind, TLDRAW_APP_ORIGIN: `http://127.0.0.1:${port}` },
+    env: { ...process.env, AGENT_BRIDGE_PORT: String(bridgePort), AGENT_BRIDGE_HOST: bind, WHITEBOARD_STUDIO_APP_ORIGIN: `http://127.0.0.1:${port}` },
   });
   pipeLogs(bridge, "bridge");
   await waitForHttp(`http://127.0.0.1:${bridgePort}/api/agent/status`, 30_000);
@@ -238,11 +238,11 @@ async function start() {
       });
     });
     publicUrl = await Promise.race([found, new Promise((r) => setTimeout(() => r(undefined), 60_000))]);
-    if (publicUrl === undefined) console.warn("cloudflared did not report a URL within 60 s; check TLDRAW_LAB_VERBOSE=1 output.");
+    if (publicUrl === undefined) console.warn("cloudflared did not report a URL within 60 s; check WHITEBOARD_STUDIO_VERBOSE=1 output.");
     if (cloudflareTunnelToken && cloudflarePublicUrl) publicUrl = cloudflarePublicUrl;
   }
 
-  console.log("\nTldraw Lab is running. Open:");
+  console.log("\nWhiteboard Studio is running. Open:");
   console.log(`  Local:  http://127.0.0.1:${bridgePort}/`);
   if (mode === "lan") for (const ip of lanAddresses()) console.log(`  LAN:    http://${ip}:${bridgePort}/`);
   if (publicUrl) console.log(`  Public: ${publicUrl}`);

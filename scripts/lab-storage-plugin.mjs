@@ -19,7 +19,7 @@ function atomicWrite(file, text) {
 export function labStoragePlugin({ projectDir = process.cwd() } = {}) {
   const paths = labPaths();
   return {
-    name: "tldraw-lab-storage",
+    name: "whiteboard-studio-storage",
     apply: "serve",
     configureServer(server) {
       ensureDataDirs(paths);

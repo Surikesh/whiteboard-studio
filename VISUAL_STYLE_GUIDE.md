@@ -13,12 +13,12 @@ The reference style is the bundled demo workspace `td_demo_web_architecture` (ed
 
 ## Asset nodes
 
-Use this shape in a `tldraw-lab/v1` spec:
+Use this shape in a `whiteboard-studio/v1` spec:
 
 ```json
 {
-  "id": "registry",
-  "label": "Artifactory",
+  "id": "orders-db",
+  "label": "Orders database",
   "x": 900,
   "y": 1200,
   "w": 180,

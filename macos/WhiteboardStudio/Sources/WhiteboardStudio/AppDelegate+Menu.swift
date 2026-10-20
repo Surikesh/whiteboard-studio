@@ -21,15 +21,15 @@ extension AppDelegate {
     let main = NSMenu()
 
     let appMenu = NSMenu()
-    appMenu.addItem(withTitle: "About Tldraw Lab", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+    appMenu.addItem(withTitle: "About Whiteboard Studio", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
     appMenu.addItem(.separator())
-    appMenu.addItem(withTitle: "Hide Tldraw Lab", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+    appMenu.addItem(withTitle: "Hide Whiteboard Studio", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
     let hideOthers = appMenu.addItem(withTitle: "Hide Others", action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
     hideOthers.keyEquivalentModifierMask = [.command, .option]
     appMenu.addItem(withTitle: "Show All", action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: "")
     appMenu.addItem(.separator())
-    appMenu.addItem(item("Quit Tldraw Lab", #selector(quit(_:)), "q"))
-    addSubmenu(appMenu, title: "Tldraw Lab", to: main)
+    appMenu.addItem(item("Quit Whiteboard Studio", #selector(quit(_:)), "q"))
+    addSubmenu(appMenu, title: "Whiteboard Studio", to: main)
 
     let fileMenu = NSMenu(title: "File")
     fileMenu.addItem(item("New Tab", #selector(newTab(_:)), "t"))
@@ -72,7 +72,7 @@ extension AppDelegate {
     previous.keyEquivalentModifierMask = [.control, .shift]
     windowMenu.addItem(previous)
     windowMenu.addItem(.separator())
-    windowMenu.addItem(item("Tldraw Lab", #selector(showMainWindow(_:)), "0"))
+    windowMenu.addItem(item("Whiteboard Studio", #selector(showMainWindow(_:)), "0"))
     addSubmenu(windowMenu, title: "Window", to: main)
 
     NSApp.mainMenu = main
