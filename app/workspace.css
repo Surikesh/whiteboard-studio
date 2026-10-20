@@ -829,7 +829,7 @@ kbd {
   }
 }
 
-/* Bubble and panel sit above tldraw's bottom-right "Get a license" watermark, which must stay visible. */
+/* Bubble and panel keep clear of tldraw's bottom-right "Get a license" watermark, which must stay visible. */
 .agent-chat-bubble {
   align-items: center;
   background: #24211f;
@@ -869,7 +869,7 @@ kbd {
   display: flex;
   flex-direction: column;
   height: min(520px, calc(100vh - 352px));
-  min-height: min(300px, calc(100vh - 44px));
+  min-height: min(300px, calc(100vh - 104px));
   overflow: hidden;
   position: fixed;
   right: 22px;
@@ -1021,11 +1021,11 @@ kbd {
 }
 @media (max-width: 600px) {
   .agent-chat-panel {
-    bottom: 44px;
+    bottom: 8px;
     right: 16px;
   }
   .agent-chat-bubble {
-    bottom: 48px;
+    bottom: 16px;
     right: 16px;
   }
 }

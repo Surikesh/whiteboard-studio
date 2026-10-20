@@ -6,9 +6,9 @@ Build and verify the local collaborative diagram laboratory described in `README
 
 ## Source of truth
 
-This repository is the only development repository. Make every change here, on `main` or a branch merged into it. There is no upstream to sync from and no export step: earlier copies of this code are archives, and nothing is ported from them without a leak check against the rules below.
+This repository is the only development repository. Make every change here, on `main` or a branch merged into it. There is no upstream to sync from and no export step: earlier copies of this code are archives, and nothing is ported from them without a leak check for private data (names, hosts, paths, real boards).
 
-Local branches under `archive/` hold history that must never be published. Push `main` and feature branches only, never `--all` or `--mirror`.
+Push only `main` and feature branches, never `--all` or `--mirror`.
 
 ## Context
 
