@@ -210,7 +210,7 @@ function needsImageHandoff(text) {
   return /__CODEX_IMAGE_HANDOFF__/.test(text) || /image_gen|generation[^.]{0,40}unavailable|(?:can't|cannot|unable to).{0,40}(?:image|picture)/i.test(text);
 }
 function extractPatch(text) {
-  const match = text.match(/```tldraw-patch\s*([\s\S]*?)```/i);
+  const match = text.match(/```whiteboard-patch\s*([\s\S]*?)```/i);
   if (!match) return null;
   try {
     const patch = JSON.parse(match[1]);
@@ -255,7 +255,7 @@ async function processQueue() {
           id: crypto.randomUUID(),
           roomId: job.roomId,
           role: "assistant",
-          text: result.text.replace(/```tldraw-patch[\s\S]*?```/gi, "").trim() || "Changes prepared.",
+          text: result.text.replace(/```whiteboard-patch[\s\S]*?```/gi, "").trim() || "Changes prepared.",
           patch: extractPatch(result.text),
           images: result.images,
           at: new Date().toISOString(),

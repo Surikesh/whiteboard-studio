@@ -23,6 +23,6 @@
       <key>CFBundleURLSchemes</key><array><string>whiteboardstudio</string></array>
     </dict>
   </array>
-  <key>TLDLabProjectDir</key><string>__PROJECT_DIR__</string>
+  <key>WhiteboardStudioProjectDir</key><string>__PROJECT_DIR__</string>
 </dict>
 </plist>

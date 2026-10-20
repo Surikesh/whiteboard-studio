@@ -113,7 +113,7 @@ export async function runOpenAiCompatible(chat, prompt, { timeoutMs = PROVIDER_T
   return { text: text.trim(), images: [] };
 }
 
-export const NO_IMAGE_INSTRUCTION = `IMPORTANT: raster image generation is NOT available in this installation. Do not try to produce, describe or ASCII-draw a picture, and do not reply with __CODEX_IMAGE_HANDOFF__. Briefly tell the user that image generation is not configured, and offer an editable diagram or illustration built from Tldraw shapes instead; if it makes sense, include a tldraw-patch block that draws it.`;
+export const NO_IMAGE_INSTRUCTION = `IMPORTANT: raster image generation is NOT available in this installation. Do not try to produce, describe or ASCII-draw a picture, and do not reply with __CODEX_IMAGE_HANDOFF__. Briefly tell the user that image generation is not configured, and offer an editable diagram or illustration built from Tldraw shapes instead; if it makes sense, include a whiteboard-patch block that draws it.`;
 
 export function chatPromptWithImagePolicy(prompt, wantsImage) {
   return wantsImage ? `${prompt}\n\n${NO_IMAGE_INSTRUCTION}` : prompt;
@@ -135,7 +135,7 @@ Apply this mandatory default visual language unless the user explicitly requests
 
 ${visualStyle}
 
-For an editable canvas change, append exactly one fenced code block named tldraw-patch containing valid JSON matching those contracts. Use concise labels and coordinates that do not overlap existing shapes. All semantic text must remain editable Tldraw text. Do not produce a patch for ordinary conversation.
+For an editable canvas change, append exactly one fenced code block named whiteboard-patch containing valid JSON matching those contracts. Use concise labels and coordinates that do not overlap existing shapes. All semantic text must remain editable Tldraw text. Do not produce a patch for ordinary conversation.
 For pictorial image requests: when running in Pi without image_gen, do not refuse and do not describe the requested picture. Reply with exactly __CODEX_IMAGE_HANDOFF__ so the bridge can invoke the Codex image-generation skill. When running in Codex, create a polished raster image with built-in image_gen, no ASCII art, and copy it to the requested job directory.`;
 }
 

@@ -1,6 +1,6 @@
 import type { Editor } from "tldraw";
 
-const THUMBNAIL_DB = "tldraw-workspace-thumbnails";
+const THUMBNAIL_DB = "whiteboard-studio-workspace-thumbnails";
 const THUMBNAIL_STORE = "thumbnails";
 
 function openThumbnailDatabase(): Promise<IDBDatabase> {

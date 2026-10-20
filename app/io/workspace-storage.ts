@@ -14,7 +14,7 @@ export type WorkspaceRevision = { at: string; snapshot: unknown };
 
 export const LIVE_DEMO_ID = "td_live_diagram_demo_v1";
 
-export const WORKSPACE_KEY = "tldraw-workspace/v1";
+export const WORKSPACE_KEY = "whiteboard-studio-workspace/v1";
 export const revisionKey = (id: string) => `${WORKSPACE_KEY}/revisions/${id}`;
 export const pendingKey = (id: string) => `${WORKSPACE_KEY}/pending/${id}`;
 

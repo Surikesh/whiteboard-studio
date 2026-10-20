@@ -68,7 +68,7 @@ enum LabConfig {
 
   /// Checkout that holds `scripts/lab.mjs`: `WHITEBOARD_STUDIO_ROOT`, the `ProjectDir` default, or the path baked into Info.plist.
   static var projectDir: String {
-    let plist = Bundle.main.object(forInfoDictionaryKey: "TLDLabProjectDir") as? String ?? ""
+    let plist = Bundle.main.object(forInfoDictionaryKey: "WhiteboardStudioProjectDir") as? String ?? ""
     let candidates = [
       ProcessInfo.processInfo.environment["WHITEBOARD_STUDIO_ROOT"], defaults.string(forKey: "ProjectDir"), plist,
     ]

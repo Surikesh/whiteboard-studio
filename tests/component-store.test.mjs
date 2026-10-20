@@ -21,7 +21,7 @@ function installStorage({ quota = Infinity } = {}) {
 const component = { id: "c1", name: "Box", createdAt: "2026-01-01T00:00:00.000Z", shapes: [{ type: "geo", x: 1, y: 2, rotation: 0, opacity: 1, props: { w: 10 }, meta: {} }] };
 
 test("the component library uses its versioned localStorage key", () => {
-  assert.equal(app.COMPONENT_LIBRARY_KEY, "tldraw-workspace/component-library/v1");
+  assert.equal(app.COMPONENT_LIBRARY_KEY, "whiteboard-studio-workspace/component-library/v1");
 });
 
 test("saved components round-trip through safeSetLocalStorage and readSavedComponents", () => {

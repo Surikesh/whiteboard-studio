@@ -71,7 +71,7 @@ app/            Next.js App Router app, served by vinext (Vite)
   styles/       CSS split by area
 worker/         Cloudflare Worker + Durable Object: sync rooms and the workspace index
 scripts/        launcher (lab.mjs), agent bridge, CLIs, storage routes, checks
-  lib/          config, provider calls, board storage, data migration
+  lib/          config, provider calls, board storage
 macos/          optional Swift/AppKit shell around the local server
 public/         demo boards, technology icons, mascot sprites
 tests/          node:test suites
