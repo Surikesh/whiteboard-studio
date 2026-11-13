@@ -3,6 +3,7 @@ import { FEET, GRIP, HANG_DROP, SPRITE_SCALE, DEG_PER_RAD, clamp, randomBetween,
 export type Spell = { x: number; y: number; done: () => void; accepted?: boolean };
 export type Sim = {
   live: boolean;
+  exiting: boolean; // work ended: finish the current act, then leave
   reduce: boolean;
   phase: Phase;
   t: number;
@@ -35,6 +36,7 @@ export type Sim = {
 };
 export const newSim = (): Sim => ({
   live: false,
+  exiting: false,
   reduce: false,
   phase: "idle",
   t: 0,

@@ -26,10 +26,11 @@ export const POSES = [
   "flick",
 ] as const;
 export type Pose = (typeof POSES)[number];
-export type Phase = "idle" | "jump" | "chute" | "fall" | "splat" | "roll" | "tumble" | "void" | "launch" | "hover" | "fly" | "walk" | "sit" | "hang" | "cheer" | "wave" | "rm" | "to-cast" | "cast";
+export type Phase =
+  "idle" | "jump" | "chute" | "fall" | "splat" | "roll" | "tumble" | "void" | "launch" | "hover" | "fly" | "walk" | "sit" | "hang" | "cheer" | "wave" | "rm" | "fade" | "leave" | "to-cast" | "cast";
 export type Kind = "walk" | "chat" | "sit" | "grab" | "hover";
 export type Surface = { y: number; x0: number; x1: number; small?: boolean };
-export const WORK_STEPS = ["Agent is working", "Agent is working · drawing", "Agent is working · still on it", "Agent is working · almost done"];
+export const WORK_STEPS = ["buddy.step1", "buddy.step2", "buddy.step3", "buddy.step4"] as const; // message keys, rotated in the status pill
 
 // Sprites are 320×320 in public/pencil/v3; bump the folder when the art changes so no browser mixes in cached frames. Feet, or the seat for sit-*, sit at (160,240); "hang" grips at (160,40).
 export const SPRITES = "/pencil/v3",

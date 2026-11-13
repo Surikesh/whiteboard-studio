@@ -18,6 +18,10 @@ export function step(buddy: Sim, dt: number, now: number) {
         buddy.pose = chat.small ? "idle" : "sit-1";
       }
       break;
+    case "fade": // reduced-motion exit
+      buddy.alpha = Math.max(0, 1 - buddy.t / 0.4);
+      if (buddy.t >= 0.4) buddy.done();
+      break;
     case "idle": // opening stunt: stand on the chat edge, then hop
       if (!chat || chat.small) {
         // chat collapsed: drop in from the top edge of the screen instead
@@ -157,7 +161,7 @@ export function step(buddy: Sim, dt: number, now: number) {
       buddy.vy *= Math.exp(-4 * dt);
       settle();
       buddy.y += Math.cos(buddy.t * 5) * 18 * dt; // gentle bob on the jet
-      if (buddy.t >= buddy.hold) {
+      if (!buddy.exiting && buddy.t >= buddy.hold) {
         buddy.stuntDone ||= now;
         buddy.pose = "hover";
         pick(buddy, now);
@@ -260,8 +264,8 @@ export function step(buddy: Sim, dt: number, now: number) {
         buddy.vy = -100;
         buddy.gnd = null;
         resetShape(buddy);
-        go(buddy, "launch");
-      } // back to work: lift off and wander on
+        go(buddy, buddy.exiting ? "leave" : "launch");
+      } // mid-work cheer: lift off and wander on; after work: fly off the top edge
       break;
     }
     case "to-cast": {
@@ -303,10 +307,21 @@ export function step(buddy: Sim, dt: number, now: number) {
       if (prev < 1.25 && t >= 1.25) sp.done();
       if (t >= 1.8) {
         buddy.spell = null;
-        buddy.pose = "hover";
-        go(buddy, "hover", 0.6);
+        if (buddy.exiting) {
+          buddy.pose = "cheer";
+          go(buddy, "cheer");
+        } else {
+          buddy.pose = "hover";
+          go(buddy, "hover", 0.6);
+        }
       }
       break;
     }
+    case "leave": // jet straight up and out of the top edge
+      buddy.vy -= 1600 * dt;
+      buddy.y += buddy.vy * dt;
+      settle();
+      if (buddy.y < -10) buddy.done();
+      break;
   }
 }
