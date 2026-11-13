@@ -27,7 +27,7 @@ import "./live-diagram.css";
 
 declare module "tldraw" {
   interface TLGlobalShapePropsMap {
-    "live-frame": { w: number; h: number; richText: TLRichText; frame: "plain" | "mat" };
+    "live-frame": { w: number; h: number; richText: TLRichText; frame: "plain" | "mat" | "bevel" };
   }
 }
 type FrameShape = TLShape<"live-frame">;
@@ -43,6 +43,13 @@ function FrameBody({ shape }: { shape: FrameShape }) {
         <>
           <rect x={7} y={7} width={w - 14} height={h - 14} rx={1} fill="none" stroke="#d0cbc0" strokeWidth={7} />
           <rect x={13} y={13} width={w - 26} height={h - 26} fill="none" stroke="#8e887c" strokeWidth={1} />
+        </>
+      )}
+      {frame === "bevel" && (
+        <>
+          <path d={`M2 2 H${w - 2} L${w - 11} 11 H11 V${h - 11} L2 ${h - 2} Z`} fill="#eeeae0" />
+          <path d={`M${w - 2} 2 V${h - 2} H2 L11 ${h - 11} H${w - 11} V11 Z`} fill="#b5afa2" />
+          <rect x={11} y={11} width={w - 22} height={h - 22} fill="none" stroke="#8e887c" strokeWidth={1} />
         </>
       )}
     </g>
@@ -274,6 +281,7 @@ export function LiveControls({ editor, playback }: { editor: Editor; playback: R
             >
               <option value="plain">Plain</option>
               <option value="mat">Mat</option>
+              <option value="bevel">Bevel</option>
             </select>
           </label>
           {!frame && <small>Select an experimental block. Regular shapes are not changed.</small>}
@@ -299,7 +307,7 @@ export function seedLiveDemo(editor: Editor) {
     const blocks = [
       { x: 0, y: 50, w: 180, h: 120, frame: "plain" as const, text: "User" },
       { x: 270, y: 30, w: 240, h: 160, frame: "mat" as const, text: "Agent\nUnderstands the request\nChooses an action" },
-      { x: 600, y: 0, w: 160, h: 220, frame: "mat" as const, text: "Service\nAPI\nProcessing" },
+      { x: 600, y: 0, w: 160, h: 220, frame: "bevel" as const, text: "Service\nAPI\nProcessing" },
       { x: 850, y: 50, w: 300, h: 120, frame: "mat" as const, text: "Response\nData ready" },
     ];
     blocks.forEach((b, i) =>

@@ -8,14 +8,14 @@ const richText = { type: "doc", content: [{ type: "paragraph", content: [{ type:
 const make = (frame) => schema.types.shape.create({ id: createShapeId("frame-test"), type: "live-frame", parentId: "page:test", index: "a1", props: { w: 220, h: 120, richText, frame } });
 
 test("frame variants and editable rich text survive validated JSON roundtrip", () => {
-  for (const frame of ["plain", "mat"]) {
+  for (const frame of ["plain", "mat", "bevel"]) {
     const record = JSON.parse(JSON.stringify(make(frame)));
     assert.deepEqual(schema.types.shape.validate(record), record);
     assert.deepEqual(record.props.richText, richText);
   }
 });
 
-test("stored bevel frames open as mat", () => {
+test("bevel frames stored before the RemoveBevel step still open as mat", () => {
   const stored = JSON.parse(JSON.stringify(make("mat")));
   stored.props.frame = "bevel";
   const persisted = schema.serialize();
