@@ -23,7 +23,11 @@ function usage() {
                         switch the Cloudflare link of the running lab; --wait blocks until it works
   agent on|off|status   toggle the agent chat at runtime
   config                show config path and config (secrets masked)
-  doctor                check Node and optional tools`);
+  doctor                check Node and optional tools
+  import --from DATA_DIR [--repo CHECKOUT] [--overwrite] [--dry-run]
+                        copy boards, revisions, assets, chat history and config of an earlier
+                        Tldraw Lab install; --repo also brings its board list and diagram specs.
+                        Stop this lab first; the old one may keep running.`);
 }
 
 function readJson(file) {
@@ -97,14 +101,7 @@ async function shareCommand(action, args) {
     }
     if (action === "restart") writeFileSync(paths.shareRestart, String(Date.now()));
   }
-  const want =
-    action === "off"
-      ? (s) => s?.status === "off"
-      : action === "on"
-        ? (s) => s?.linkReady
-        : action === "restart"
-          ? (s) => s?.linkReady && (s.launches ?? 0) > launchesBefore
-          : null;
+  const want = action === "off" ? (s) => s?.status === "off" : action === "on" ? (s) => s?.linkReady : action === "restart" ? (s) => s?.linkReady && (s.launches ?? 0) > launchesBefore : null;
   const deadline = Date.now() + waitSeconds * 1000;
   // Give the supervisor (2 s tick) a moment to pick up a switch before reporting.
   const settleUntil = Date.now() + (action && action !== "status" ? 3_000 : 0);
@@ -269,6 +266,52 @@ function portInUse(port) {
   });
 }
 
+function optionValue(args, name) {
+  const index = args.indexOf(name);
+  if (index < 0) return undefined;
+  const value = args[index + 1];
+  if (!value || value.startsWith("--")) throw new Error(`${name} needs a value`);
+  return path.resolve(value.replace(/^~(?=$|[\\/])/, os.homedir()));
+}
+
+async function importCommand(args) {
+  const fromData = optionValue(args, "--from");
+  const fromRepo = optionValue(args, "--repo");
+  const overwrite = args.includes("--overwrite");
+  const dryRun = args.includes("--dry-run");
+  if (!fromData) throw new Error("Usage: lab import --from DATA_DIR [--repo CHECKOUT] [--overwrite] [--dry-run]");
+  if (!existsSync(path.join(fromData, "state"))) throw new Error(`${fromData} has no state/ folder; is it a Tldraw Lab data directory?`);
+  const paths = dryRun ? labPaths() : ensureDataDirs();
+  if (path.resolve(fromData) === path.resolve(paths.root)) throw new Error("--from is this lab's own data directory");
+  const config = loadConfig(paths);
+  if (!dryRun && ((await portInUse(config.share.port)) || (await portInUse(config.share.bridgePort))))
+    throw new Error(`Something listens on port ${config.share.port} or ${config.share.bridgePort}; stop this lab before importing (its rooms are open)`);
+  const { importRooms, importWorkspace, importFiles, mergeLegacyConfig, uniqueKeyFor } = await import("./lib/legacy-import.mjs");
+  const workerName = readJson(path.join(projectDir, "package.json")).name;
+  const rooms = await importRooms({ fromState: path.join(fromData, "state"), toState: paths.state, newUniqueKey: uniqueKeyFor(workerName), overwrite, dryRun });
+  const files = importFiles({ fromData, paths, overwrite, dryRun });
+  const workspace = fromRepo ? importWorkspace({ fromRepo, projectDir, paths, overwrite, dryRun }) : null;
+  const legacyConfigFile = path.join(fromData, "config.json");
+  let configImported = false;
+  if (existsSync(legacyConfigFile) && (overwrite || !existsSync(paths.config) || readFileSync(paths.config, "utf8") === `${JSON.stringify(defaultConfig, null, 2)}\n`)) {
+    if (!dryRun) saveConfig(mergeLegacyConfig(config, readJson(legacyConfigFile)), paths);
+    configImported = true;
+  }
+  const prefix = dryRun ? "would copy" : "copied";
+  console.log(`${dryRun ? "Dry run, nothing written. " : ""}Target: ${paths.root}`);
+  console.log(`rooms: ${prefix} ${rooms.copied.length}, already there ${rooms.skipped.length}${rooms.unnamed.length ? `, without a stored name (left alone) ${rooms.unnamed.length}` : ""}`);
+  if (rooms.mismatched.length) console.log(`  note: ${rooms.mismatched.length} room file(s) had an id that does not match their stored name; imported by name`);
+  for (const [name, counts] of Object.entries(files)) if (typeof counts === "object") console.log(`${name}: ${prefix} ${counts.copied} file(s), already there ${counts.skipped}`);
+  console.log(`chat history: ${files.messages ? prefix : "kept"}`);
+  console.log(
+    `config: ${configImported ? `${prefix} (agent, storage and Cloudflare settings; ports stay ${config.share.port}/${config.share.bridgePort})` : "kept (pass --overwrite to merge the old one in)"}`,
+  );
+  if (workspace) {
+    console.log(`board list: ${prefix} ${workspace.boards.added.length}, already there ${workspace.boards.kept.length}, demo ids left as demos ${workspace.boards.demo.length}`);
+    console.log(`diagram specs: ${prefix} ${workspace.specs.copied.length}, already there ${workspace.specs.skipped.length}, demo names left as demos ${workspace.specs.demo.length}`);
+  }
+}
+
 function lanAddresses() {
   return Object.values(os.networkInterfaces())
     .flat()
@@ -354,6 +397,9 @@ try {
       break;
     case "doctor":
       doctor();
+      break;
+    case "import":
+      await importCommand(rest);
       break;
     default:
       usage();
