@@ -15,7 +15,10 @@ function fakeTunnel(spawned, { ignoreTerm = false } = {}) {
   return () => {
     const n = spawned.length + 1;
     const trap = ignoreTerm ? `process.on("SIGTERM", () => {});` : "";
-    const child = spawn(process.execPath, ["-e", `${trap} console.error("|  https://fake-${n}.trycloudflare.com  |"); setInterval(() => {}, 1000);`], { detached: true, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(process.execPath, ["-e", `${trap} console.error("|  https://fake-${n}.trycloudflare.com  |"); setInterval(() => {}, 1000);`], {
+      detached: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
     spawned.push(child);
     return child;
   };

@@ -41,7 +41,8 @@ const worker = {
     if (url.pathname === "/api/workspace") {
       // The shared board list (titles, projects) is the owner's: guests read an empty list and cannot change it,
       // matching the demo-only /workspace/index.json they get from the dev server.
-      if (isTunnelled(request)) return request.method === "GET" || request.method === "HEAD" ? Response.json([], { headers: { "cache-control": "no-store" } }) : new Response("Forbidden", { status: 403 });
+      if (isTunnelled(request))
+        return request.method === "GET" || request.method === "HEAD" ? Response.json([], { headers: { "cache-control": "no-store" } }) : new Response("Forbidden", { status: 403 });
       const workspace = env.TLDRAW_DURABLE_OBJECT.get(env.TLDRAW_DURABLE_OBJECT.idFromName("__workspace-index__"));
       return workspace.fetch(request);
     }

@@ -33,8 +33,7 @@ test("a user spec wins over a demo spec; odd names are refused", () => {
   mkdirSync(paths.diagrams, { recursive: true });
   writeFileSync(path.join(paths.diagrams, "example.diagram.json"), "{}");
   assert.equal(resolveDiagramFile(projectDir, paths, demo), path.join(paths.diagrams, "example.diagram.json"));
-  for (const bad of ["/diagrams/../workspace/index.json", "/diagrams/a/b.json", "/diagrams/.hidden.json", "/other/x.json", "/diagrams/x.txt"])
-    assert.equal(diagramName(bad), null, bad);
+  for (const bad of ["/diagrams/../workspace/index.json", "/diagrams/a/b.json", "/diagrams/.hidden.json", "/other/x.json", "/diagrams/x.txt"]) assert.equal(diagramName(bad), null, bad);
   assert.equal(resolveDiagramFile(projectDir, paths, "/diagrams/missing.diagram.json"), null);
 });
 
@@ -74,5 +73,8 @@ test("boards open in the macOS app through its URL scheme, with a browser fallba
   assert.deepEqual(calls.pop(), ["open", "whiteboardstudio://127.0.0.1:4174/d/td_x"]);
   calls.length = 0;
   assert.equal(openBoard("http://127.0.0.1:4174/d/td_x", { platform: "darwin", run: run(1) }), "browser");
-  assert.deepEqual(calls, [["open", "whiteboardstudio://127.0.0.1:4174/d/td_x"], ["open", "http://127.0.0.1:4174/d/td_x"]]);
+  assert.deepEqual(calls, [
+    ["open", "whiteboardstudio://127.0.0.1:4174/d/td_x"],
+    ["open", "http://127.0.0.1:4174/d/td_x"],
+  ]);
 });

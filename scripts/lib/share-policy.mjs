@@ -155,8 +155,7 @@ function probe(state, { now, ok, localDns, error }) {
     return { state: set(state, { ...patch, status: "ready", attempt: 0 }, now), actions: [] };
   }
   const reason = error ?? (state.url ? "public link does not answer" : "no public URL yet");
-  if (now < state.graceUntil)
-    return { state: set(state, { lastError: reason, firstOkAt: null, localDns: false, status: state.status === "ready" ? "checking" : state.status }, now), actions: [] };
+  if (now < state.graceUntil) return { state: set(state, { lastError: reason, firstOkAt: null, localDns: false, status: state.status === "ready" ? "checking" : state.status }, now), actions: [] };
   const failures = state.failures + 1;
   const degraded = set(state, { failures, lastError: reason, firstOkAt: null, status: state.status === "gave-up" ? "gave-up" : "degraded" }, now);
   if (failures < POLICY.failuresToAct) return { state: degraded, actions: [] };

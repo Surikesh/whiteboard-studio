@@ -21,7 +21,6 @@ for (const file of ["scripts/agent-bridge.mjs", "scripts/diagram.mjs", "scripts/
 for (const file of ["scripts/diagram.mjs", "scripts/workspace.mjs"]) {
   test(`${file} writes specs through normalizeSpec`, () => {
     const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
-    for (const write of source.match(/writeFile\([^;]*diagram[^;]*;|writeFile\(specPath[^;]*;|writeFile\(output[^;]*;/g) ?? [])
-      assert.match(write, /normalizeSpec\(/, write);
+    for (const write of source.match(/writeFile\([^;]*diagram[^;]*;|writeFile\(specPath[^;]*;|writeFile\(output[^;]*;/g) ?? []) assert.match(write, /normalizeSpec\(/, write);
   });
 }

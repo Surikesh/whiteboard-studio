@@ -97,12 +97,29 @@ export function processesUsing(dir, { command = "lsof", timeoutMs = 30_000 } = {
   if (!existsSync(dir)) return [];
   const run = spawnSync(command, ["-t", "+D", dir], { encoding: "utf8", timeout: timeoutMs });
   if (run.error?.code === "ENOENT") return null;
-  const pids = [...new Set(String(run.stdout ?? "").split(/\s+/).filter(Boolean).map(Number))];
+  const pids = [
+    ...new Set(
+      String(run.stdout ?? "")
+        .split(/\s+/)
+        .filter(Boolean)
+        .map(Number),
+    ),
+  ];
   // lsof exits 0 or 1 (macOS lsof +D exits 1 even when it lists matches); a failure or partial scan shows up as
   // another status or as diagnostics on stderr.
   const clean = run.status === 0 || run.status === 1;
   if (run.error || !clean || String(run.stderr ?? "").trim() || pids.some((pid) => !Number.isInteger(pid)))
-    throw new Error(`Could not tell whether ${dir} is in use (${run.error?.code === "ETIMEDOUT" ? `lsof took longer than ${timeoutMs / 1000} s` : `lsof: ${String(run.stderr || run.error?.message || `exit ${run.status}`).trim().split("\n")[0]}`}); stop every lab using it and try again`);
+    throw new Error(
+      `Could not tell whether ${dir} is in use (${
+        run.error?.code === "ETIMEDOUT"
+          ? `lsof took longer than ${timeoutMs / 1000} s`
+          : `lsof: ${
+              String(run.stderr || run.error?.message || `exit ${run.status}`)
+                .trim()
+                .split("\n")[0]
+            }`
+      }); stop every lab using it and try again`,
+    );
   return pids.filter((pid) => pid !== process.pid);
 }
 
