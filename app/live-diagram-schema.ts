@@ -21,11 +21,11 @@ const versions = createShapePropsMigrationIds("live-frame", { RemoveBevel: 1, Re
 export const liveFrameMigrations = createShapePropsMigrationSequence({
   sequence: [
     {
-      // Boards saved before this step (with an early 'bevel' frame) open as 'mat'.
+      // Once turned 'bevel' into 'mat' while the style was missing. Now that step 2 brings 'bevel' back, keeping
+      // the conversion would flatten every board saved before step 1 (including boards of the earlier Tldraw Lab,
+      // which never had this sequence), so it is a no-op. Steps are never removed: stores already at 1 expect it.
       id: versions.RemoveBevel,
-      up(props: { frame: string }) {
-        if (props.frame === "bevel") props.frame = "mat";
-      },
+      up() {},
     },
     {
       // 'bevel' is a real style again. Up is a no-op; down keeps a client on version 1 valid

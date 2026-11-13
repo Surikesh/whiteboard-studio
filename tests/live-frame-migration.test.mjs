@@ -11,7 +11,7 @@ const schema = createTLSchema({
 });
 const richText = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Frame" }] }] };
 
-test("a snapshot with a bevel live-frame migrates to the mat frame and validates", () => {
+test("a board saved without the live-frame sequence (earlier Tldraw Lab) keeps its bevel frame", () => {
   const frame = {
     id: createShapeId("frm"),
     typeName: "shape",
@@ -30,7 +30,7 @@ test("a snapshot with a bevel live-frame migrates to the mat frame and validates
   delete persisted.sequences["com.tldraw.shape.live-frame"];
   const result = schema.migrateStoreSnapshot({ store: { [frame.id]: frame }, schema: persisted });
   assert.equal(result.type, "success");
-  assert.equal(schema.types.shape.validate(result.value[frame.id]).props.frame, "mat");
+  assert.equal(schema.types.shape.validate(result.value[frame.id]).props.frame, "bevel");
 });
 
 test("a bevel frame saved at version 1 is kept, and a version 2 bevel is valid", () => {

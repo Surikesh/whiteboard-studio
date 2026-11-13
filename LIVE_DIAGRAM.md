@@ -44,7 +44,7 @@ Pulses are SVG `animateMotion`, activity is CSS opacity, with no RAF updates to 
 - Styling is available only for `live-frame`. There is no automatic conversion of existing geo shapes and no new toolbar tool: add a frame from "Styling".
 - SVG/PNG are **static**: frames, rich text and standard arrows. Animation and the wrapper highlight are not exported. `RichTextSVG` in this version uses SVG `foreignObject`: Chrome and PNG via the standard exporter were checked; third-party SVG apps without foreignObject support are not guaranteed.
 - An old client without the `live-frame` registration needs updated code to open documents with the new type. Old documents without it need no migration.
-- Frame styles migrate in `app/live-diagram-schema.ts`: boards saved before version 1 with an early `bevel` frame open as `mat`; from version 2 `bevel` is a real style again, and a client still on version 1 receives it as `mat`.
+- Frame styles migrate in `app/live-diagram-schema.ts`: `bevel` is a real style; boards saved before the sequence existed (including boards of the earlier Tldraw Lab) keep it, because step 1, which once turned it into `mat`, is now a no-op. A client still on version 1 receives `bevel` as `mat`.
 - No new dependencies, image generation, external APIs, node_modules patches or changes to the agent access mode.
 
 ## Checks and evidence
