@@ -15,14 +15,14 @@ test("frame variants and editable rich text survive validated JSON roundtrip", (
   }
 });
 
-test("bevel frames stored before the RemoveBevel step still open as mat", () => {
+test("bevel frames stored before the live-frame sequence keep the style and their text", () => {
   const stored = JSON.parse(JSON.stringify(make("mat")));
   stored.props.frame = "bevel";
   const persisted = schema.serialize();
   delete persisted.sequences["com.tldraw.shape.live-frame"];
   const result = schema.migrateStoreSnapshot({ store: { [stored.id]: stored }, schema: persisted });
   assert.equal(result.type, "success");
-  assert.equal(schema.types.shape.validate(result.value[stored.id]).props.frame, "mat");
+  assert.equal(schema.types.shape.validate(result.value[stored.id]).props.frame, "bevel");
   assert.deepEqual(result.value[stored.id].props.richText, richText);
 });
 
