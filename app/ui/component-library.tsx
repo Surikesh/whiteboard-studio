@@ -8,11 +8,13 @@ import { AssetIcon } from "../domain/icons";
 import { ASSET_TYPE } from "../domain/shapes/types";
 import { COMPONENT_LIBRARY_KEY, readSavedComponents, type SavedComponent } from "../io/component-store";
 import { safeSetLocalStorage } from "../io/workspace-storage";
+import { useT } from "../domain/i18n";
 
 export function ComponentLibrary({ editor, open, onClose }: { editor: Editor; open: boolean; onClose: () => void }) {
   const [query, setQuery] = useState("");
   const [savedComponents, setSavedComponents] = useState<SavedComponent[]>(readSavedComponents);
   const selectedCount = useValue("selected component shapes", () => editor.getSelectedShapeIds().length, [editor]);
+  const t = useT();
   if (!open) return null;
   const needle = query.trim().toLowerCase();
   const kinds = ASSET_KINDS.filter((kind) => !LEGACY_ASSET_KINDS.includes(kind) && `${assetCatalog[kind].label} ${assetCatalog[kind].group} ${kind}`.toLowerCase().includes(needle));
@@ -27,7 +29,7 @@ export function ComponentLibrary({ editor, open, onClose }: { editor: Editor; op
   const saveSelection = () => {
     const shapes = editor.getSelectedShapes();
     if (!shapes.length) return;
-    const name = window.prompt("Component name", shapes.length === 1 ? "My component" : `Group of ${shapes.length} items`)?.trim();
+    const name = window.prompt(t("components.namePrompt"), shapes.length === 1 ? t("components.defaultName") : t("components.groupName", { count: shapes.length }))?.trim();
     if (!name) return;
     const minX = Math.min(...shapes.map((shape) => shape.x));
     const minY = Math.min(...shapes.map((shape) => shape.y));
@@ -54,19 +56,19 @@ export function ComponentLibrary({ editor, open, onClose }: { editor: Editor; op
     safeSetLocalStorage(COMPONENT_LIBRARY_KEY, JSON.stringify(next));
   };
   return (
-    <aside className="component-library" aria-label="Component library">
+    <aside className="component-library" aria-label={t("components.aria")}>
       <header>
         <div>
-          <strong>Components</strong>
-          <small>Click to add to the canvas</small>
+          <strong>{t("components.title")}</strong>
+          <small>{t("components.hint")}</small>
         </div>
-        <button aria-label="Close library" onClick={onClose}>
+        <button aria-label={t("components.close")} onClick={onClose}>
           ×
         </button>
       </header>
-      <input autoFocus aria-label="Search components" placeholder="Search: database, user, API…" value={query} onChange={(event) => setQuery(event.target.value)} />
+      <input autoFocus aria-label={t("components.searchAria")} placeholder={t("components.search")} value={query} onChange={(event) => setQuery(event.target.value)} />
       <section>
-        <h2>Architecture</h2>
+        <h2>{t("components.architecture")}</h2>
         <div className="component-catalog">
           {kinds.map((kind) => (
             <button key={kind} onClick={() => insertAsset(kind)}>
@@ -83,22 +85,22 @@ export function ComponentLibrary({ editor, open, onClose }: { editor: Editor; op
       </section>
       <section className="saved-components">
         <div className="component-section-heading">
-          <h2>My components</h2>
+          <h2>{t("components.mine")}</h2>
           <button disabled={!selectedCount} onClick={saveSelection}>
-            Save selection
+            {t("components.saveSelection")}
           </button>
         </div>
         {!saved.length ? (
-          <p>{savedComponents.length ? "Nothing found" : "Select items on the canvas and save them as a reusable component."}</p>
+          <p>{savedComponents.length ? t("components.nothingFound") : t("components.savedEmpty")}</p>
         ) : (
           saved.map((item) => (
             <div className="saved-component" key={item.id}>
               <button onClick={() => insertSaved(item)}>
                 <span>{item.name.slice(0, 1).toUpperCase()}</span>
                 <strong>{item.name}</strong>
-                <small>{item.shapes.length} items</small>
+                <small>{t("components.items", { count: item.shapes.length })}</small>
               </button>
-              <button aria-label={`Delete ${item.name}`} onClick={() => removeSaved(item.id)}>
+              <button aria-label={t("components.delete", { name: item.name })} onClick={() => removeSaved(item.id)}>
                 ×
               </button>
             </div>

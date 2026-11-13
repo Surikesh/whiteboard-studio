@@ -4,6 +4,8 @@ import { BaseBoxShapeUtil, Editor, HTMLContainer, RecordProps, T, TLShape, creat
 import { createUniver, LocaleType, mergeLocales } from "@univerjs/presets";
 import { UniverSheetsCorePreset } from "@univerjs/preset-sheets-core";
 import UniverPresetSheetsCoreEnUS from "@univerjs/preset-sheets-core/locales/en-US";
+import UniverPresetSheetsCoreRuRU from "@univerjs/preset-sheets-core/locales/ru-RU";
+import { getUiLocale, t, useT, useUiLocale, type UiLocale } from "./domain/i18n";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import "@univerjs/preset-sheets-core/lib/index.css";
@@ -26,24 +28,29 @@ declare module "tldraw" {
 
 type CellData = Record<number, Record<number, { v?: string | number; f?: string }>>;
 
+// Univer's UI language follows the app locale; workbook data is the same in both.
+function univerLocale(locale: UiLocale) {
+  return locale === "ru" ? { id: LocaleType.RU_RU, strings: UniverPresetSheetsCoreRuRU } : { id: LocaleType.EN_US, strings: UniverPresetSheetsCoreEnUS };
+}
+
 function initialWorkbook(title: string) {
   const sheetId = `sheet-${crypto.randomUUID()}`;
   return {
     id: `workbook-${crypto.randomUUID()}`,
     name: title,
     appVersion: "0.25.1",
-    locale: LocaleType.EN_US,
+    locale: univerLocale(getUiLocale()).id,
     sheetOrder: [sheetId],
     sheets: {
       [sheetId]: {
         id: sheetId,
-        name: "Sheet 1",
+        name: t("sheet.sheetName"),
         rowCount: 100,
         columnCount: 26,
         cellData: {
-          0: { 0: { v: "New spreadsheet" }, 1: { v: "Value" } },
-          1: { 0: { v: "Example" }, 1: { v: 1 } },
-          2: { 0: { v: "Formula" }, 1: { f: "=B2*2" } },
+          0: { 0: { v: t("sheet.defaultTitle") }, 1: { v: t("sheet.value") } },
+          1: { 0: { v: t("sheet.example") }, 1: { v: 1 } },
+          2: { 0: { v: t("sheet.formula") }, 1: { f: "=B2*2" } },
         } as CellData,
       },
     },
@@ -89,12 +96,14 @@ function SpreadsheetView({ shape }: { shape: SpreadsheetShape }) {
   const latestWorkbook = useRef(shape.props.workbook);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const isEditing = useValue("editing spreadsheet", () => editor.getEditingShapeId() === shape.id, [editor, shape.id]);
+  const locale = useUiLocale();
+  const tr = useT();
 
   useEffect(() => {
     if (!isEditing || !containerRef.current) return;
     const { univerAPI } = createUniver({
-      locale: LocaleType.EN_US,
-      locales: { [LocaleType.EN_US]: mergeLocales(UniverPresetSheetsCoreEnUS) },
+      locale: univerLocale(locale).id,
+      locales: { [univerLocale(locale).id]: mergeLocales(univerLocale(locale).strings) },
       presets: [UniverSheetsCorePreset({ container: containerRef.current })],
     });
     univerAPI.createWorkbook(parseWorkbook(latestWorkbook.current, shape.props.title));
@@ -124,14 +133,14 @@ function SpreadsheetView({ shape }: { shape: SpreadsheetShape }) {
     // Recreate Univer only when entering editing mode. Remote data changes are
     // picked up next time, avoiding destruction while the user is typing.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- shape.props.title only seeds a new workbook; recreating Univer on remote changes would destroy it mid-edit
-  }, [isEditing, isFullscreen, editor, shape.id]);
+  }, [isEditing, isFullscreen, editor, shape.id, locale]);
 
   const previewZoom = shape.props.previewZoom ?? 1;
   const visibleColumnCount = Math.max(2, Math.min(20, Math.ceil((shape.props.w - 42) / (128 * previewZoom))));
   const visibleRowCount = Math.max(3, Math.min(40, Math.ceil((shape.props.h - 66) / (32 * previewZoom))));
   const rows = previewRows(shape.props.workbook, visibleRowCount, visibleColumnCount);
   const rename = () => {
-    const title = window.prompt("Spreadsheet title", shape.props.title)?.trim();
+    const title = window.prompt(tr("sheet.titlePrompt"), shape.props.title)?.trim();
     if (title && title !== shape.props.title) editor.updateShape({ id: shape.id, type: SPREADSHEET_TYPE, props: { title } });
   };
   const changePreviewZoom = (change: number) => {
@@ -141,12 +150,12 @@ function SpreadsheetView({ shape }: { shape: SpreadsheetShape }) {
   const editorSurface = isEditing && (
     <div className={isFullscreen ? "spreadsheet-fullscreen" : "spreadsheet-shape__editor"} onPointerDown={(event) => event.stopPropagation()}>
       <header>
-        <button type="button" className="spreadsheet-title-button" onClick={rename} title="Rename spreadsheet">
+        <button type="button" className="spreadsheet-title-button" onClick={rename} title={tr("sheet.rename")}>
           {shape.props.title}
         </button>
-        <span>Changes are saved automatically</span>
+        <span>{tr("sheet.autosave")}</span>
         <button type="button" onClick={() => setIsFullscreen((value) => !value)}>
-          {isFullscreen ? "Back to canvas" : "Full screen"}
+          {isFullscreen ? tr("sheet.backToCanvas") : tr("sheet.fullScreen")}
         </button>
       </header>
       <div ref={containerRef} className="spreadsheet-shape__univer" />
@@ -161,22 +170,22 @@ function SpreadsheetView({ shape }: { shape: SpreadsheetShape }) {
     >
       {!isFullscreen && (
         <header>
-          <button type="button" className="spreadsheet-title-button" onPointerDown={(event) => event.stopPropagation()} onClick={rename} title="Rename spreadsheet">
+          <button type="button" className="spreadsheet-title-button" onPointerDown={(event) => event.stopPropagation()} onClick={rename} title={tr("sheet.rename")}>
             {shape.props.title}
           </button>
           {isEditing ? (
-            <span>Esc to leave the spreadsheet</span>
+            <span>{tr("sheet.escHint")}</span>
           ) : (
             <div className="spreadsheet-preview-tools" onPointerDown={(event) => event.stopPropagation()}>
-              <button type="button" aria-label="Zoom out spreadsheet preview" onClick={() => changePreviewZoom(-0.15)}>
+              <button type="button" aria-label={tr("sheet.zoomOut")} onClick={() => changePreviewZoom(-0.15)}>
                 −
               </button>
               <span>{Math.round(previewZoom * 100)}%</span>
-              <button type="button" aria-label="Zoom in spreadsheet preview" onClick={() => changePreviewZoom(0.15)}>
+              <button type="button" aria-label={tr("sheet.zoomIn")} onClick={() => changePreviewZoom(0.15)}>
                 +
               </button>
               <button type="button" onClick={() => editor.setEditingShape(shape.id)}>
-                Edit
+                {tr("sheet.edit")}
               </button>
             </div>
           )}
@@ -227,7 +236,7 @@ export class SpreadsheetShapeUtil extends BaseBoxShapeUtil<SpreadsheetShape> {
   };
 
   getDefaultProps(): SpreadsheetShape["props"] {
-    const title = "New spreadsheet";
+    const title = t("sheet.defaultTitle");
     return { w: 820, h: 520, title, workbook: JSON.stringify(initialWorkbook(title)), previewZoom: 1 };
   }
 
@@ -262,7 +271,7 @@ function workbookFromRows(title: string, rows: string[][]) {
 export function addSpreadsheet(editor: Editor, options?: { title?: string; rows?: string[][] }) {
   const id = createShapeId(`spreadsheet-${Date.now().toString(36)}`);
   const center = editor.getViewportPageBounds().center;
-  const title = options?.title ?? "New spreadsheet";
+  const title = options?.title ?? t("sheet.defaultTitle");
   const props = options?.rows ? { title, workbook: JSON.stringify(workbookFromRows(title, options.rows)) } : undefined;
   editor.createShape({ id, type: SPREADSHEET_TYPE, x: center.x - 410, y: center.y - 260, props });
   editor.select(id);

@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, type MutableRefObject } from "react";
 import { defaultBindingUtils, loadSnapshot, type Editor, type TLAnyShapeUtilConstructor } from "tldraw";
 import { useSync } from "@tldraw/sync";
+import { t } from "../domain/i18n";
 import { loadDiagramSpec } from "../domain/spec/load-graph";
 import type { DiagramSpec } from "../domain/spec/types";
 import { resizeGeneratedTextBoxes, clearTransientCanvasOverlays } from "../domain/spec/helpers";
@@ -64,7 +65,7 @@ export function createEditorSessionOperations(options: Partial<EditorSessionOper
   };
 
   const onUserChange = () => {
-    o.status.setSaved("Saving…");
+    o.status.setSaved(t("status.saving"));
     if (o.thumbnailTimer.current) clearTimeout(o.thumbnailTimer.current);
     o.thumbnailTimer.current = setTimeout(() => {
       void captureThumbnail("thumbnail-user-change");
@@ -73,7 +74,7 @@ export function createEditorSessionOperations(options: Partial<EditorSessionOper
     o.revisionTimer.current = setTimeout(() => {
       // Revisions are written on disk by the dev server (lab-storage-plugin).
       o.touchDocument(o.currentId, new Date().toISOString());
-      o.status.setSaved("Saved");
+      o.status.setSaved(t("status.saved"));
       setTimeout(() => o.status.setSaved(""), 1200);
     }, 900);
   };

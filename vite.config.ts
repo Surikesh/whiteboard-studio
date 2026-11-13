@@ -2,6 +2,7 @@ import vinext from "vinext";
 import { defineConfig, type UserConfig } from "vite";
 import { ensureDataDirs, labPaths } from "./scripts/lib/lab-config.mjs";
 import { labStoragePlugin } from "./scripts/lab-storage-plugin.mjs";
+import { uiConfigPlugin } from "./scripts/ui-config-plugin.mjs";
 
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
@@ -54,6 +55,7 @@ export default defineConfig(async ({ command }): Promise<UserConfig> => {
     plugins: [
       vinext(),
       labStoragePlugin({ projectDir: process.cwd() }),
+      uiConfigPlugin(),
       cloudflare({
         viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
         config: localBindingConfig,

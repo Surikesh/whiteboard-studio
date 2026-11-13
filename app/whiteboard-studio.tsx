@@ -8,6 +8,8 @@ import { addServiceArchitecture } from "./domain/templates/service";
 import { SpreadsheetShapeUtil, addSpreadsheet } from "./spreadsheet-shape";
 import { useSaveStatus } from "./state/save-status";
 import { useAgentPatch } from "./state/use-agent-patch";
+import { useUiConfig } from "./state/use-ui-config";
+import { useT, useUiLocale, t } from "./domain/i18n";
 import { useDocumentIo } from "./state/use-document-io";
 import { useEditorSession } from "./state/use-editor-session";
 import { useWorkspace } from "./state/use-workspace";
@@ -26,6 +28,20 @@ export const shapeUtils = [...domainShapeUtils, SpreadsheetShapeUtil, LiveFrameU
 export const collaborativeShapeUtils = [...defaultShapeUtils, ...shapeUtils];
 
 export function WhiteboardStudio({ initialDocumentId }: { initialDocumentId?: string } = {}) {
+  const ready = useUiConfig();
+  if (!ready)
+    return (
+      <main className="lab-loading">
+        <span>WHITEBOARD STUDIO</span>
+        <strong>Preparing the canvas…</strong>
+      </main>
+    );
+  return <WhiteboardStudioApp initialDocumentId={initialDocumentId} />;
+}
+
+function WhiteboardStudioApp({ initialDocumentId }: { initialDocumentId?: string }) {
+  const locale = useUiLocale();
+  const tr = useT();
   const status = useSaveStatus();
   const { saved, setSaved } = status;
   const workspace = useWorkspace({ initialDocumentId, status });
@@ -62,7 +78,7 @@ export function WhiteboardStudio({ initialDocumentId }: { initialDocumentId?: st
       }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
-        setSaved("Saved");
+        setSaved(t("status.saved"));
         window.setTimeout(() => setSaved(""), 1200);
       }
       if (event.key === "Escape") setLibraryOpen(false);
@@ -129,11 +145,12 @@ export function WhiteboardStudio({ initialDocumentId }: { initialDocumentId?: st
       )}
 
       {currentId && (
-        <section className="canvas-wrap" aria-label="Interactive Whiteboard canvas">
+        <section className="canvas-wrap" aria-label={tr("canvas.aria")}>
           <LivePlaybackContext.Provider value={playback.playing}>
             <BoardSwitcherContext.Provider value={boardSwitcherContext}>
               <Tldraw
                 key={currentId}
+                locale={locale}
                 licenseKey={TLDRAW_LICENSE_KEY}
                 hideUi={focusMode}
                 components={menuComponents}
@@ -151,8 +168,8 @@ export function WhiteboardStudio({ initialDocumentId }: { initialDocumentId?: st
         <>
           <button
             className={`component-library-trigger${componentLibraryOpen ? " is-open" : ""}`}
-            aria-label="Open component library"
-            title="Components"
+            aria-label={tr("components.open")}
+            title={tr("components.trigger")}
             onClick={() => setComponentLibraryOpen((value) => !value)}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">

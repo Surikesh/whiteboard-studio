@@ -23,6 +23,7 @@ import {
   type TLRichText,
 } from "tldraw";
 import { liveFrameMigrations, liveFrameProps } from "./live-diagram-schema";
+import { useT } from "./domain/i18n";
 import "./live-diagram.css";
 
 declare module "tldraw" {
@@ -237,23 +238,24 @@ export function LiveControls({ editor, playback }: { editor: Editor; playback: R
   const frame = selected.length === 1 && selected[0].type === "live-frame" ? selected[0] : null;
   const targets = selected.filter((s) => s.type !== "arrow");
   const arrows = selected.filter((s) => s.type === "arrow");
+  const t = useT();
   const toggleMeta = (key: "liveActive" | "liveFlow", shapes: TLShape[]) => {
     editor.markHistoryStoppingPoint("live setting");
     const enable = !shapes.every((s) => s.meta[key] === true);
     editor.updateShapes(shapes.map((s) => ({ id: s.id, type: s.type, meta: { ...s.meta, [key]: enable } })));
   };
   return (
-    <div className="live-controls" aria-label="Live diagram">
+    <div className="live-controls" aria-label={t("live.aria")}>
       <button
         aria-pressed={playback.requested}
         disabled={playback.reduced}
-        title={playback.reduced ? "Motion is disabled by the system reduced-motion setting" : "Pulses on marked connections"}
+        title={playback.reduced ? t("live.reducedTitle") : t("live.pulsesTitle")}
         onClick={() => playback.setRequested(!playback.requested)}
       >
-        {playback.reduced ? "No motion" : playback.requested ? "Pause" : "Live diagram · Play"}
+        {playback.reduced ? t("live.noMotion") : playback.requested ? t("live.pause") : t("live.play")}
       </button>
       <details>
-        <summary>Styling</summary>
+        <summary>{t("live.styling")}</summary>
         <div className="live-options">
           <button
             disabled={readonly}
@@ -265,12 +267,12 @@ export function LiveControls({ editor, playback }: { editor: Editor; playback: R
               editor.select(id);
             }}
           >
-            Add framed block
+            {t("live.addBlock")}
           </button>
           <label>
-            Frame
+            {t("live.frame")}
             <select
-              aria-label="Frame"
+              aria-label={t("live.frame")}
               disabled={!frame || readonly}
               value={frame?.props.frame ?? "plain"}
               onChange={(e) => {
@@ -279,19 +281,19 @@ export function LiveControls({ editor, playback }: { editor: Editor; playback: R
                 editor.updateShape<FrameShape>({ id: frame.id, type: frame.type, props: { frame: e.target.value as FrameShape["props"]["frame"] } });
               }}
             >
-              <option value="plain">Plain</option>
-              <option value="mat">Mat</option>
-              <option value="bevel">Bevel</option>
+              <option value="plain">{t("live.framePlain")}</option>
+              <option value="mat">{t("live.frameMat")}</option>
+              <option value="bevel">{t("live.frameBevel")}</option>
             </select>
           </label>
-          {!frame && <small>Select an experimental block. Regular shapes are not changed.</small>}
+          {!frame && <small>{t("live.selectHint")}</small>}
           <button disabled={!targets.length || readonly} aria-pressed={targets.length > 0 && targets.every((s) => s.meta.liveActive === true)} onClick={() => toggleMeta("liveActive", targets)}>
-            Block highlight
+            {t("live.highlight")}
           </button>
           <button disabled={!arrows.length || readonly} aria-pressed={arrows.length > 0 && arrows.every((s) => s.meta.liveFlow === true)} onClick={() => toggleMeta("liveFlow", arrows)}>
-            Flow along selected arrows
+            {t("live.flow")}
           </button>
-          <small>Straight and arc arrows with a single arrowhead. Double-click a block to edit its text.</small>
+          <small>{t("live.arrowsHint")}</small>
         </div>
       </details>
     </div>

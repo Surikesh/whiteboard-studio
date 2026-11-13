@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type MutableRefObject } from "react";
+import { t } from "../domain/i18n";
 import {
   LIVE_DEMO_ID,
   createDocumentPusher,
@@ -197,7 +198,7 @@ export function useWorkspace({ initialDocumentId, status }: { initialDocumentId?
   };
 
   const deleteDocument = (id: string) => {
-    if (!window.confirm("Delete the document from the local workspace?")) return;
+    if (!window.confirm(t("dialog.deleteDocument"))) return;
     persistDocuments(documents.filter((document) => document.id !== id));
     void deleteSharedDocument(id).catch((error) => status.setSaved(`Error deleting from shared list: ${String(error)}`));
     localStorage.removeItem(revisionKey(id));

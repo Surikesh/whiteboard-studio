@@ -137,6 +137,7 @@ Config names:
 - `agent.chat.provider`: `none` (default), `pi`, `codex`, `claude` or `openai-compatible`. The last needs `baseUrl`, `model` and either `apiKeyEnv` (the name of an environment variable holding the key) or `apiKey`. Use `claude` only where your terms allow it.
 - `agent.image.provider`: `none` (default) or `codex`.
 - Default models can be set with `WHITEBOARD_STUDIO_PI_MODEL` and `WHITEBOARD_STUDIO_CODEX_MODEL`.
+- `ui.locale`: `en` (default) or `ru`. Switches the interface language: tldraw menus and dialogs, the library, board switcher, chat panel, live-diagram controls, spreadsheet (Univer) and the comparison-table "Criterion" header, plus date formats and the page `lang`. It is read once when the page loads, so reload after changing it. Agent replies follow the language of each message and use `ui.locale` only when a message has no letters. This setting does not need the agent or a provider.
 
 ```json
 {

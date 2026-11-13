@@ -1,6 +1,7 @@
 import { type Editor, createShapeId, toRichText } from "tldraw";
 import { type DiagramSpec } from "./types";
 import { clearTransientCanvasOverlays } from "./helpers";
+import { t } from "../i18n";
 
 export function loadTableSpec(editor: Editor, spec: DiagramSpec) {
   const table = spec.table!;
@@ -11,7 +12,7 @@ export function loadTableSpec(editor: Editor, spec: DiagramSpec) {
   const valueWidth = 310;
   const headerHeight = 100;
   const rowHeight = 92;
-  const columns = ["Criterion", ...table.columns];
+  const columns = [t("table.criterion"), ...table.columns];
   const rows = [columns, ...table.rows.map((row) => [row.label, ...row.values])];
   editor.run(() => {
     if (spec.title) editor.createShape({ id: createShapeId(`table-title-${suffix}`), type: "text", x: left, y: 30, props: { w: 1200, size: "xl", font: "sans", richText: toRichText(spec.title) } });

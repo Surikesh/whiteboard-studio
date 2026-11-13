@@ -1,4 +1,6 @@
 // Pure state and copy for the agent chat and its settings panel (unit-tested in tests/agent-chat-model.test.mjs).
+import { translate } from "./domain/messages.mjs";
+
 export const OPEN_AGENT_SETTINGS_EVENT = "whiteboard-studio:open-agent-settings";
 
 /** Config names only; values live in the data directory (`~/WhiteboardStudio-data`, `WHITEBOARD_STUDIO_DATA_DIR`) or the environment, never in the repository. */
@@ -38,16 +40,16 @@ export function chatState(status, sending = false) {
   return { configured, enabled, busy, working: enabled && (busy || sending) };
 }
 
-export function chatSubtitle({ configured, enabled, busy }) {
-  if (!configured) return "no provider configured";
-  if (!enabled) return "agent access is off";
-  return busy ? "agent is working…" : "ready to help";
+export function chatSubtitle({ configured, enabled, busy }, locale = "en") {
+  if (!configured) return translate(locale, "chat.subtitleNone");
+  if (!enabled) return translate(locale, "chat.subtitleOff");
+  return translate(locale, busy ? "chat.subtitleBusy" : "chat.subtitleReady");
 }
 
-export function chatHint({ configured, enabled }) {
-  if (!configured) return "No AI provider is configured yet. Collaborative editing works without one.";
-  if (!enabled) return "Agent access is off. Turn it on with: npm run lab -- agent on";
-  return "Describe a diagram and the agent will draw it on the canvas.";
+export function chatHint({ configured, enabled }, locale = "en") {
+  if (!configured) return translate(locale, "chat.hintNone");
+  if (!enabled) return translate(locale, "chat.hintOff");
+  return translate(locale, "chat.hintReady");
 }
 
 /** Graphite exists only while the agent works (the `working` flag of chatState); this is the single render-boundary decision. */
