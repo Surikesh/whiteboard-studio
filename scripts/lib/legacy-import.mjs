@@ -89,33 +89,45 @@ function copyFileAtomic(from, to) {
 
 /**
  * Process ids (other than this one) holding files open under `dir`, via `lsof`. Catches a destination lab started
- * any way (lab start, npm start on any port). Returns null when lsof is unavailable, so the caller falls back.
+ * any way (lab start, npm start on any port). Returns null when lsof is not installed, so the caller falls back to
+ * the port check. Throws when lsof ran but its answer cannot be trusted (error exit, diagnostics, timeout), so the
+ * import never writes on an uncertain "nobody".
  */
-export function processesUsing(dir) {
+export function processesUsing(dir, { command = "lsof", timeoutMs = 30_000 } = {}) {
   if (!existsSync(dir)) return [];
-  const run = spawnSync("lsof", ["-t", "+D", dir], { encoding: "utf8" });
-  if (run.error) return null;
-  return [...new Set(run.stdout.split(/\s+/).filter(Boolean).map(Number))].filter((pid) => pid !== process.pid);
+  const run = spawnSync(command, ["-t", "+D", dir], { encoding: "utf8", timeout: timeoutMs });
+  if (run.error?.code === "ENOENT") return null;
+  const pids = [...new Set(String(run.stdout ?? "").split(/\s+/).filter(Boolean).map(Number))];
+  // lsof exits 0 or 1 (macOS lsof +D exits 1 even when it lists matches); a failure or partial scan shows up as
+  // another status or as diagnostics on stderr.
+  const clean = run.status === 0 || run.status === 1;
+  if (run.error || !clean || String(run.stderr ?? "").trim() || pids.some((pid) => !Number.isInteger(pid)))
+    throw new Error(`Could not tell whether ${dir} is in use (${run.error?.code === "ETIMEDOUT" ? `lsof took longer than ${timeoutMs / 1000} s` : `lsof: ${String(run.stderr || run.error?.message || `exit ${run.status}`).trim().split("\n")[0]}`}); stop every lab using it and try again`);
+  return pids.filter((pid) => pid !== process.pid);
 }
 
 /** The old bridge rewrites its chat file in place; take it only when two reads agree and it parses as a list. */
 async function stableMessages(file) {
   for (let attempt = 0; attempt < 5; attempt++) {
-    const first = readFileSync(file);
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    const second = readFileSync(file);
-    if (first.equals(second)) {
-      try {
-        if (Array.isArray(JSON.parse(second.toString("utf8")))) return second;
-      } catch {
-        // mid-write or damaged: read again
-      }
+    try {
+      const first = readFileSync(file);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const second = readFileSync(file);
+      if (first.equals(second) && Array.isArray(JSON.parse(second.toString("utf8")))) return second;
+    } catch {
+      // mid-write, gone or unreadable: try again
     }
   }
   return null;
 }
 
-const sameFile = (a, b) => existsSync(b) && statSync(a).size === statSync(b).size && readFileSync(a).equals(readFileSync(b));
+const sameFile = (a, b) => {
+  try {
+    return existsSync(b) && statSync(a).size === statSync(b).size && readFileSync(a).equals(readFileSync(b));
+  } catch {
+    return false; // decided by the guarded read in stableMessages
+  }
+};
 
 /**
  * Durable Object rooms: each `<old id>.sqlite` gets the id its room name has under the new worker name.

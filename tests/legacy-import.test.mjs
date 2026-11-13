@@ -166,3 +166,18 @@ test("lab import keeps an existing config, even the default one, unless --overwr
   assert.equal(lab("import", "--from", from, "--overwrite").status, 0);
   assert.equal(JSON.parse(readFileSync(path.join(data, "config.json"), "utf8")).share.mode, "cloudflare");
 });
+
+test("an lsof that fails, warns or hangs stops the import; a missing lsof falls back", { skip: process.platform === "win32" }, () => {
+  const dir = tmp("held-state-");
+  const bin = tmp("fake-lsof-");
+  const fake = (name, body) => {
+    const file = path.join(bin, name);
+    writeFileSync(file, `#!/bin/sh\n${body}\n`, { mode: 0o755 });
+    return file;
+  };
+  assert.throws(() => processesUsing(dir, { command: fake("broken", "echo 'lsof: illegal option' >&2; exit 1") }), /Could not tell/);
+  assert.throws(() => processesUsing(dir, { command: fake("partial", "echo 123; echo 'lsof: WARNING: can't stat()' >&2; exit 1") }), /Could not tell/);
+  assert.throws(() => processesUsing(dir, { command: fake("slow", "sleep 5"), timeoutMs: 200 }), /longer than/);
+  assert.deepEqual(processesUsing(dir, { command: fake("none", "exit 1") }), []);
+  assert.equal(processesUsing(dir, { command: path.join(bin, "missing") }), null);
+});
