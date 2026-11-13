@@ -166,7 +166,9 @@ export function WorkspaceDrawer({
                 if (event.currentTarget.open) refreshServerRevisions();
               }}
             >
-              <summary>{t("drawer.history")} · {serverRevisions.length + revisions.length}</summary>
+              <summary>
+                {t("drawer.history")} · {serverRevisions.length + revisions.length}
+              </summary>
               {serverRevisions.slice(0, 8).map((revision) => (
                 <button key={revision.file} onClick={() => void restoreServerRevision(revision.file)}>
                   {formatDate(revision.at, locale, true)}

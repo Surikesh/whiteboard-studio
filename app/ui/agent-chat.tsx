@@ -171,7 +171,8 @@ export function AgentChat({ roomId, getEditor, applyPatch }: { roomId: string; g
           ))}
           {busy && (
             <article className="assistant typing">
-              {t("chat.working")}<span>•••</span>
+              {t("chat.working")}
+              <span>•••</span>
             </article>
           )}
         </div>
