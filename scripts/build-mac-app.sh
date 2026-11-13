@@ -20,7 +20,9 @@ sed "s|__PROJECT_DIR__|$PROJECT_DIR|" "$SRC/Info.plist" > "$STAGED/Contents/Info
 /usr/libexec/PlistBuddy -c "Set :CFBundleURLTypes:0:CFBundleURLName $BUNDLE_ID" "$STAGED/Contents/Info.plist" 2>/dev/null || true
 # A new build number per build makes the Dock and Cmd-Tab drop their cached icon.
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $(date +%Y%m%d%H%M%S)" "$STAGED/Contents/Info.plist"
-swift "$SRC/make-icon.swift" "$SRC/AppIcon.svg" "$WORK/AppIcon.iconset"
+# Compiled rather than run as a script: the script interpreter does not link AppKit on every toolchain.
+swiftc -O -framework AppKit "$SRC/make-icon.swift" -o "$WORK/make-icon"
+"$WORK/make-icon" "$SRC/AppIcon.svg" "$WORK/AppIcon.iconset"
 iconutil -c icns "$WORK/AppIcon.iconset" -o "$STAGED/Contents/Resources/AppIcon.icns"
 codesign --force --sign - "$STAGED" >/dev/null
 
