@@ -53,6 +53,30 @@
   padding: 14px;
 }
 
+.runtime-logos {
+  align-items: center;
+  display: grid;
+  gap: 7px 10px;
+  grid-template-columns: repeat(3, 1fr);
+  justify-items: center;
+  width: 118px;
+}
+
+.runtime-logos .tech-logo {
+  height: 30px;
+  width: 30px;
+}
+
+.runtime-logos .tech-logo:nth-child(4) {
+  grid-column: 1 / 2;
+  margin-left: 40px;
+}
+
+.runtime-logos .tech-logo:nth-child(5) {
+  grid-column: 3 / 4;
+  margin-right: 40px;
+}
+
 .pencil-icon {
   filter: contrast(1.08);
 }

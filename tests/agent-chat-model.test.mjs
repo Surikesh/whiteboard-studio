@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { POSE_TRIGGERS, SETTINGS_SECTIONS, buddyAcceptsCast, buddyOn, chatHint, chatState, chatSubtitle } from "../app/agent-chat-model.mjs";
+import { BUDDY_DEMO_MS, POSE_TRIGGERS, SETTINGS_SECTIONS, buddyAcceptsCast, buddyDemo, buddyExit, buddyOn, chatHint, chatState, chatSubtitle } from "../app/agent-chat-model.mjs";
 import { CHAT_PROVIDERS } from "../scripts/lib/agent-providers.mjs";
 import { defaultConfig } from "../scripts/lib/lab-config.mjs";
 
@@ -33,7 +33,7 @@ test("settings copy names real config keys and carries no secrets or owner wordi
   assert.doesNotMatch(text + chatHint({ configured: false }), /graphite|owner|story|sk-/i);
 });
 
-test("Graphite visibility: mounted iff the agent works (render-boundary decision)", () => {
+test("Graphite enters while the agent works or on a demo page", () => {
   const working = (status, sending = false) => chatState(status, sending).working;
   const live = { enabled: true, busy: true, chat: { configured: true } };
   const idle = { enabled: true, busy: false, chat: { configured: true } };
@@ -43,11 +43,24 @@ test("Graphite visibility: mounted iff the agent works (render-boundary decision
   assert.equal(buddyOn(working(null)), false, "no status");
   assert.equal(buddyOn(working({ enabled: false, busy: true, chat: { configured: true } })), false, "agent off");
   assert.equal(buddyOn(working({ enabled: true, busy: true, chat: { configured: false } })), false, "no provider");
-  assert.equal(buddyAcceptsCast(working(idle)), false, "cast while idle is declined");
-  assert.equal(buddyAcceptsCast(working(live)), true, "cast while working is accepted");
+  assert.equal(buddyOn(working(idle), true), true, "demo without an agent");
+  assert.equal(buddyDemo("?buddy=demo"), true);
+  assert.equal(buddyDemo("?buddy=on"), false);
+  assert.equal(buddyDemo(""), false);
+  assert.equal(BUDDY_DEMO_MS, 10000);
 });
 
-test("Graphite keeps all 24 poses, each on a working-only path", () => {
+test("Graphite accepts late spells and picks an exit for the phase he is in", () => {
+  assert.equal(buddyAcceptsCast(), true, "a picture after work brings him back");
+  assert.equal(buddyAcceptsCast({ reduce: true }), false, "reduced motion");
+  assert.equal(buddyAcceptsCast({ casting: true }), false, "one spell at a time");
+  assert.equal(buddyExit({ reduce: true, phase: "walk" }), "fade");
+  for (const phase of ["void", "tumble"]) assert.equal(buddyExit({ phase }), "now", phase);
+  for (const phase of ["jump", "chute", "fall", "launch"]) assert.equal(buddyExit({ phase }), "leave", phase);
+  for (const phase of ["idle", "hover", "fly", "walk", "sit", "hang", "cheer", "splat", "roll"]) assert.equal(buddyExit({ phase }), "cheer", phase);
+});
+
+test("Graphite keeps all 24 poses and the exit, demo and late-spell paths", () => {
   const source = ["model", "sim", "step", "effects", "pencil-buddy"]
     .map((name) => readFileSync(new URL(`../app/ui/agent-buddy/${name}.${name === "pencil-buddy" ? "tsx" : "ts"}`, import.meta.url), "utf8"))
     .join("\n");
@@ -57,10 +70,14 @@ test("Graphite keeps all 24 poses, each on a working-only path", () => {
   for (const pose of poses) {
     assert.match(POSE_TRIGGERS[pose], /\S/);
     assert.ok(source.includes(`"${pose}"`) || pose.startsWith("walk-") || pose.startsWith("sit-"), pose);
-    assert.doesNotMatch(POSE_TRIGGERS[pose], /after work|idle agent|finished/i, `${pose} must not need a post-work state`);
   }
-  // The cheer -> wave -> launch chain is wired to the working-time milestone and never ends in an unmount.
-  assert.match(source, /if \(!cheers \|\| !buddy\.live[^]*?buddy\.pose = "cheer";\s*go\(buddy, "cheer"\)/);
-  assert.match(source, /buddy\.phase === "wave"[^]*?go\(buddy, "launch"\)/);
-  assert.doesNotMatch(source, /case "leave"|buddy\.exiting|setLeaving|demo/);
+  // Mid-work cheer -> wave -> launch keeps working; after work the same chain ends in "leave", which unmounts at the top edge.
+  assert.match(source, /if \(!cheers \|\| !buddy\.live \|\| buddy\.exiting[^]*?buddy\.pose = "cheer";\s*go\(buddy, "cheer"\)/);
+  assert.match(source, /buddy\.phase === "wave"[^]*?go\(buddy, buddy\.exiting \? "leave" : "launch"\)/);
+  assert.match(source, /case "leave":[^]*?if \(buddy\.y < -10\) buddy\.done\(\)/);
+  assert.match(source, /case "fade":[^]*?buddy\.done\(\)/);
+  // A finished spell during the exit cheers before leaving; a spell after unmount respawns at the top edge.
+  assert.match(source, /if \(buddy\.exiting\) \{\s*buddy\.pose = "cheer";/);
+  assert.match(source, /if \(!buddy\.live\) \{[^]*?spawn\(buddy, true\);\s*buddy\.x = spell\.x - 160;\s*buddy\.y = -20;/);
+  assert.match(source, /addEventListener\("pencil-buddy-demo", replay\)/);
 });

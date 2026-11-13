@@ -1,4 +1,6 @@
 // Pure state and copy for the agent chat and its settings panel (unit-tested in tests/agent-chat-model.test.mjs).
+import { translate } from "./domain/messages.mjs";
+
 export const OPEN_AGENT_SETTINGS_EVENT = "whiteboard-studio:open-agent-settings";
 
 /** Config names only; values live in the data directory (`~/WhiteboardStudio-data`, `WHITEBOARD_STUDIO_DATA_DIR`) or the environment, never in the repository. */
@@ -38,25 +40,40 @@ export function chatState(status, sending = false) {
   return { configured, enabled, busy, working: enabled && (busy || sending) };
 }
 
-export function chatSubtitle({ configured, enabled, busy }) {
-  if (!configured) return "no provider configured";
-  if (!enabled) return "agent access is off";
-  return busy ? "agent is working…" : "ready to help";
+export function chatSubtitle({ configured, enabled, busy }, locale = "en") {
+  if (!configured) return translate(locale, "chat.subtitleNone");
+  if (!enabled) return translate(locale, "chat.subtitleOff");
+  return translate(locale, busy ? "chat.subtitleBusy" : "chat.subtitleReady");
 }
 
-export function chatHint({ configured, enabled }) {
-  if (!configured) return "No AI provider is configured yet. Collaborative editing works without one.";
-  if (!enabled) return "Agent access is off. Turn it on with: npm run lab -- agent on";
-  return "Describe a diagram and the agent will draw it on the canvas.";
+export function chatHint({ configured, enabled }, locale = "en") {
+  if (!configured) return translate(locale, "chat.hintNone");
+  if (!enabled) return translate(locale, "chat.hintOff");
+  return translate(locale, "chat.hintReady");
 }
 
-/** Graphite exists only while the agent works (the `working` flag of chatState); this is the single render-boundary decision. */
-export const buddyOn = (working) => Boolean(working);
+/** Graphite enters while the agent works, or on a demo page (`?buddy=demo`); once that ends he plays an exit and unmounts. */
+export const buddyOn = (working, demo = false) => Boolean(working) || Boolean(demo);
 
-/** A spell request while the agent is idle is declined, so the board never resurrects a hidden Graphite. */
-export const buddyAcceptsCast = (working) => Boolean(working);
+/** `?buddy=demo` plays Graphite without an agent; the demo ends this long after the opening stunt and replays on a `pencil-buddy-demo` event. */
+export const buddyDemo = (search) => new URLSearchParams(search).get("buddy") === "demo";
+export const BUDDY_DEMO_MS = 10000;
 
-/** Every Graphite pose and how it is reached while the agent works (verified against pencil-buddy.tsx in tests). There is no after-work state. */
+/**
+ * A spell is accepted whether or not the agent still works: a picture that lands after the work ended brings Graphite back
+ * from the top edge, and he leaves again afterwards. Reduced motion and a spell already in flight decline it.
+ */
+export const buddyAcceptsCast = ({ reduce = false, casting = false } = {}) => !reduce && !casting;
+
+/** How Graphite leaves when work ends: fade with reduced motion, unmount at once while off-screen, fly up while airborne, else cheer, wave and fly up. */
+export function buddyExit({ reduce = false, phase }) {
+  if (reduce) return "fade";
+  if (phase === "void" || phase === "tumble") return "now";
+  if (["jump", "chute", "fall", "launch"].includes(phase)) return "leave";
+  return "cheer";
+}
+
+/** Every Graphite pose and how it is reached (verified against the agent-buddy sources in tests). */
 export const POSE_TRIGGERS = {
   idle: "opening stunt on the chat edge",
   "chute-fail": "opening stunt (tangled parachute)",
@@ -64,7 +81,7 @@ export const POSE_TRIGGERS = {
   fall: "opening stunt",
   splat: "opening stunt",
   roll: "opening stunt",
-  launch: "opening stunt, and after the cheer",
+  launch: "opening stunt, after a mid-work cheer, and flying off when work ends",
   hover: "between wanderings",
   fly: "wandering",
   "walk-1": "wander on the toolbar",
@@ -76,10 +93,10 @@ export const POSE_TRIGGERS = {
   "sit-1": "sit on the chat",
   "sit-2": "sit on the chat",
   hang: "grab the pointer",
-  cheer: "agent patch applied while working",
+  cheer: "agent patch applied while working, when work ends, and after a late spell",
   wave: "after the cheer",
-  "wand-out": "image spell accepted while working",
-  "wand-up": "image spell accepted while working",
-  cast: "image spell accepted while working",
-  flick: "image spell accepted while working",
+  "wand-out": "image spell, also for a picture that lands after work (Graphite returns from the top edge)",
+  "wand-up": "image spell",
+  cast: "image spell",
+  flick: "image spell",
 };

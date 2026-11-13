@@ -9,7 +9,7 @@ import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { guestMayReadAsset, isSharedBoardAsset } from "../scripts/lib/board-assets.mjs";
 import { labStoragePlugin } from "../scripts/lab-storage-plugin.mjs";
-import { agentRouteAccess, canonicalPath, isRemoteAssetName, isRemoteRequest } from "../scripts/lib/remote-request.mjs";
+import { GUEST_HEADER, agentRouteAccess, canonicalPath, isRemoteAssetName, isRemoteRequest } from "../scripts/lib/remote-request.mjs";
 
 const UUID = "123e4567-e89b-42d3-a456-426614174000";
 const JOB = "223e4567-e89b-42d3-a456-426614174001";
@@ -133,10 +133,10 @@ function request(port, method, url, headers = {}, body) {
   });
 }
 
-async function startBridge(t) {
+async function startBridge(t, appPort) {
   const dataDir = mkdtempSync(path.join(os.tmpdir(), "lab-boundary-"));
   const port = await freePort();
-  const appPort = await freePort(); // nothing listens: proxied requests answer 502, which proves "not handled by the bridge"
+  appPort ??= await freePort(); // by default nothing listens: proxied requests answer 502, which proves "not handled by the bridge"
   const child = spawn(process.execPath, [path.resolve("scripts/agent-bridge.mjs")], {
     env: { ...process.env, WHITEBOARD_STUDIO_DATA_DIR: dataDir, AGENT_BRIDGE_PORT: String(port), AGENT_BRIDGE_HOST: "127.0.0.1", WHITEBOARD_STUDIO_APP_ORIGIN: `http://127.0.0.1:${appPort}` },
     stdio: ["ignore", "pipe", "pipe"],
@@ -249,6 +249,24 @@ test("bridge: remote guests are refused on every private route while agent acces
   assert.equal((await remote("GET", "/api/workspace")).status, 502);
 });
 
+test("bridge: requests it judged remote reach the app marked as guests, local ones unmarked", async (t) => {
+  const seen = [];
+  const app = http.createServer((req, res) => {
+    seen.push({ url: req.url, guest: req.headers[GUEST_HEADER] });
+    res.end("app");
+  });
+  await new Promise((resolve) => app.listen(0, "127.0.0.1", resolve));
+  t.after(() => app.close());
+  const { port } = await startBridge(t, app.address().port);
+  await request(port, "GET", "/api/workspace");
+  await request(port, "GET", "/api/workspace", TUNNEL);
+  await request(port, "GET", "/api/workspace", { "cf-connecting-ip": "127.0.0.1" }); // spoofed loopback value: still a guest
+  assert.deepEqual(
+    seen.map((r) => r.guest),
+    [undefined, "1", "1"],
+  );
+});
+
 // ---- the dev-server storage plugin ---------------------------------------------
 
 test("storage plugin: guests get no revisions and only board-referenced assets; a loopback header value is still a guest", async (t) => {
@@ -282,6 +300,20 @@ test("storage plugin: guests get no revisions and only board-referenced assets; 
   const stamped = { "cf-connecting-ip": "127.0.0.1" }; // spoofable; never trusted
 
   assert.match((await call(`/api/lab/revisions?id=${ROOM}`)).body, /2026-01-01/);
+  // The shared board list: guests (tunnel, spoofed loopback, or marked by the bridge) read [] and cannot change it.
+  assert.equal((await call("/api/workspace")).passedOn, true);
+  for (const h of [TUNNEL, stamped, { [GUEST_HEADER]: "1" }]) {
+    assert.equal((await call("/api/workspace", h)).body, "[]");
+    for (const method of ["PUT", "POST", "DELETE"]) assert.equal((await call("/api/workspace?id=td_x", h, method)).status, 403, method);
+  }
+  // A LAN guest proxied by the bridge gets the plain public/ index and specs, never the user's overlay.
+  mkdirSync(path.join(dataDir, "workspace"), { recursive: true });
+  mkdirSync(path.join(dataDir, "diagrams"), { recursive: true });
+  writeFileSync(path.join(dataDir, "workspace", "index.json"), JSON.stringify([{ id: "td_private_x", title: "PRIVATE-TITLE" }]));
+  writeFileSync(path.join(dataDir, "diagrams", "td_private_x.diagram.json"), "{}");
+  assert.match((await call("/workspace/index.json")).body, /PRIVATE-TITLE/);
+  assert.equal((await call("/workspace/index.json", { [GUEST_HEADER]: "1" })).passedOn, true);
+  assert.equal((await call("/diagrams/td_private_x.diagram.json", { [GUEST_HEADER]: "1" })).passedOn, true);
   assert.equal((await call(`/api/lab/revisions?id=${ROOM}`, stamped)).status, 403);
   for (const u of [
     `/api/lab/revisions?id=${ROOM}`,

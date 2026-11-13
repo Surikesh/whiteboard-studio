@@ -13,9 +13,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   private(set) var didLaunch = false
   private(set) var isTerminating = false
   var isCheckingServer = false
-  var isCheckingHealth = false
-  var healthPending = false
-  var healthGeneration = 0
   private var wakeObserver: NSObjectProtocol?
   private var timers: [Timer] = []
   private var memoryPressure: DispatchSourceMemoryPressure?
@@ -70,7 +67,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         MainActor.assumeIsolated { self?.pollServer() }
       },
     ]
-    scheduleHealthCheck(after: 10)
     wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
       forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
     ) { [weak self] _ in

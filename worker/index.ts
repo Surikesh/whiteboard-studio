@@ -23,11 +23,25 @@ import { isWorkspaceId } from "../app/io/workspace-id.mjs";
 
 export { TldrawDurableObject } from "./TldrawDurableObject";
 
+/**
+ * A request from a tunnel or LAN guest. The dev server and the bridge decide this first (scripts/lib/remote-request.mjs,
+ * which also sets x-whiteboard-studio-guest for LAN guests it proxies); this is the worker's own second check.
+ * See the snapshot route below for why a loopback client IP is local here.
+ */
+function isTunnelled(request: Request) {
+  if (request.headers.has("x-whiteboard-studio-guest")) return true;
+  const clientIp = request.headers.get("cf-connecting-ip");
+  return Boolean(clientIp && !/^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1|localhost)$/.test(clientIp.trim()));
+}
+
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/workspace") {
+      // The shared board list (titles, projects) is the owner's: guests read an empty list and cannot change it,
+      // matching the demo-only /workspace/index.json they get from the dev server.
+      if (isTunnelled(request)) return request.method === "GET" || request.method === "HEAD" ? Response.json([], { headers: { "cache-control": "no-store" } }) : new Response("Forbidden", { status: 403 });
       const workspace = env.TLDRAW_DURABLE_OBJECT.get(env.TLDRAW_DURABLE_OBJECT.idFromName("__workspace-index__"));
       return workspace.fetch(request);
     }
@@ -38,8 +52,7 @@ const worker = {
       // Inside the worker, Miniflare stamps loopback clients with CF-Connecting-IP
       // (miniflare 4.20260515.0, node_modules/miniflare/dist/src/workers/core/entry.worker.js:4435), so only
       // a non-loopback value (set by Cloudflare's edge) marks a tunnelled request.
-      const clientIp = request.headers.get("cf-connecting-ip");
-      if (clientIp && !/^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1|localhost)$/.test(clientIp.trim())) return new Response("Forbidden", { status: 403 });
+      if (isTunnelled(request)) return new Response("Forbidden", { status: 403 });
       const roomId = decodeURIComponent(snapshotMatch[1]);
       if (!isWorkspaceId(roomId)) return Response.json({ error: "Invalid room id" }, { status: 400 });
       const room = env.TLDRAW_DURABLE_OBJECT.get(env.TLDRAW_DURABLE_OBJECT.idFromName(roomId));

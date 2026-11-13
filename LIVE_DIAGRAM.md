@@ -5,7 +5,7 @@
 Run `npm run dev` and open `/d/td_live_diagram_demo_v1` on its local address. A "Live diagram demo" link is available in the library and in the editor's main menu. This is a separate room with a stable ID, not a replacement for the current document. The seed is created only on an empty, not yet initialized demo page; later edits are persisted by the regular realtime model.
 
 1. At the bottom left, click **"Live diagram · Play"**, then **"Pause"**.
-2. Select a block → **"Styling" → "Frame"**: plain, passe-partout (mat), or raised frame.
+2. Select a block → **"Styling" → "Frame"**: plain, passe-partout (mat), or raised bevel frame (bevel).
 3. Drag the regular selection handles; double-click edits the text.
 4. "Add block with frame" creates the same experimental rectangle on any board.
 5. "Block highlight" toggles the activity flag on the selected blocks, and "Flow along selected arrows" does the same for selected arrows. Both are saved in the document. Playback is only local tab state and is always off after a reload.
@@ -44,6 +44,7 @@ Pulses are SVG `animateMotion`, activity is CSS opacity, with no RAF updates to 
 - Styling is available only for `live-frame`. There is no automatic conversion of existing geo shapes and no new toolbar tool: add a frame from "Styling".
 - SVG/PNG are **static**: frames, rich text and standard arrows. Animation and the wrapper highlight are not exported. `RichTextSVG` in this version uses SVG `foreignObject`: Chrome and PNG via the standard exporter were checked; third-party SVG apps without foreignObject support are not guaranteed.
 - An old client without the `live-frame` registration needs updated code to open documents with the new type. Old documents without it need no migration.
+- Frame styles migrate in `app/live-diagram-schema.ts`: `bevel` is a real style; boards saved before the sequence existed (including boards of the earlier Tldraw Lab) keep it, because step 1, which once turned it into `mat`, is now a no-op. A client still on version 1 receives `bevel` as `mat`.
 - No new dependencies, image generation, external APIs, node_modules patches or changes to the agent access mode.
 
 ## Checks and evidence

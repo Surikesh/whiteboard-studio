@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { formatDate, useT, useUiLocale } from "../domain/i18n";
 import { LIVE_DEMO_ID, documentPath, type WorkspaceDocument } from "../io/workspace-storage";
 import type { useDocumentIo } from "../state/use-document-io";
 
@@ -34,48 +35,50 @@ export function WorkspaceLibrary({
   openDocument: (id: string) => void;
   deleteDocument: (id: string) => void;
 }) {
+  const t = useT();
+  const locale = useUiLocale();
   return (
-    <section className="workspace-library" aria-label="Diagram library">
+    <section className="workspace-library" aria-label={t("library.aria")}>
       <header className="library-header">
         <div>
-          <h1>My diagrams</h1>
+          <h1>{t("library.title")}</h1>
           <p>
-            All boards at a glance. <a href={documentPath(LIVE_DEMO_ID)}>“Live diagram” demo</a>
+            {t("library.intro")} <a href={documentPath(LIVE_DEMO_ID)}>{t("library.liveDemo")}</a>
           </p>
         </div>
         <button className="primary" onClick={() => createDocument()}>
-          New diagram
+          {t("library.newDiagram")}
         </button>
       </header>
       <div className="library-search">
-        <input autoFocus placeholder="Search by title, ID, project or tag…" value={query} onChange={(event) => setQuery(event.target.value)} />
+        <input autoFocus placeholder={t("library.search")} value={query} onChange={(event) => setQuery(event.target.value)} />
         <kbd>⌘ K</kbd>
       </div>
       <div className="document-grid">
         {filteredDocuments.map((document) => (
           <article className="document-card" key={document.id}>
-            <button className="document-preview" aria-label={`Open diagram “${document.title}”`} onClick={() => openDocument(document.id)}>
-              {documentThumbnails[document.id] ? <img src={documentThumbnails[document.id]} alt="" /> : <span className="document-preview__pending">Preview appears after opening</span>}
+            <button className="document-preview" aria-label={t("library.open", { title: document.title })} onClick={() => openDocument(document.id)}>
+              {documentThumbnails[document.id] ? <img src={documentThumbnails[document.id]} alt="" /> : <span className="document-preview__pending">{t("library.previewPending")}</span>}
             </button>
             <div className="document-card__body">
               <button className="document-title" onClick={() => openDocument(document.id)}>
                 {document.title}
               </button>
               <code>{document.id}</code>
-              <p>{document.nextStep || "Next step not recorded yet"}</p>
+              <p>{document.nextStep || t("library.noNextStep")}</p>
               <small>
-                {document.project} · {new Date(document.updatedAt).toLocaleDateString("en-US")}
+                {document.project} · {formatDate(document.updatedAt, locale)}
               </small>
             </div>
-            <button className="document-delete" aria-label={`Delete ${document.title}`} onClick={() => deleteDocument(document.id)}>
+            <button className="document-delete" aria-label={t("library.delete", { title: document.title })} onClick={() => deleteDocument(document.id)}>
               ×
             </button>
           </article>
         ))}
         {!filteredDocuments.length && (
           <div className="library-empty">
-            <strong>{documents.length ? "Nothing found" : "Workspace is empty"}</strong>
-            <span>Create your first diagram — it gets a permanent ID.</span>
+            <strong>{documents.length ? t("library.nothingFound") : t("library.empty")}</strong>
+            <span>{t("library.emptyHint")}</span>
           </div>
         )}
       </div>
@@ -116,16 +119,18 @@ export function WorkspaceDrawer({
   restoreServerRevision: DocumentIo["restoreServerRevision"];
   restoreRevision: DocumentIo["restoreRevision"];
 }) {
+  const t = useT();
+  const locale = useUiLocale();
   return (
     <div className="drawer-backdrop" onMouseDown={onClose}>
       <aside className="workspace-drawer" onMouseDown={(event) => event.stopPropagation()}>
         <div className="drawer-heading">
-          <strong>Workspace</strong>
+          <strong>{t("drawer.title")}</strong>
           <button onClick={onClose}>×</button>
         </div>
-        <input autoFocus placeholder="Search diagrams…" value={query} onChange={(event) => setQuery(event.target.value)} />
+        <input autoFocus placeholder={t("drawer.search")} value={query} onChange={(event) => setQuery(event.target.value)} />
         <button className="drawer-new" onClick={() => createDocument()}>
-          New diagram
+          {t("library.newDiagram")}
         </button>
         <div className="drawer-documents">
           {filteredDocuments.map((document) => (
@@ -138,7 +143,7 @@ export function WorkspaceDrawer({
         {current && (
           <div className="document-details">
             <label>
-              Title
+              {t("drawer.docTitle")}
               <input
                 value={current.title}
                 onChange={(event) => {
@@ -148,28 +153,30 @@ export function WorkspaceDrawer({
               />
             </label>
             <label>
-              Project
+              {t("drawer.project")}
               <input value={current.project} onChange={(event) => updateCurrent({ project: event.target.value })} />
             </label>
             <label>
-              Where I left off
+              {t("drawer.nextStep")}
               <textarea value={current.nextStep} onChange={(event) => updateCurrent({ nextStep: event.target.value })} />
             </label>
-            <button onClick={() => navigator.clipboard.writeText(current.id)}>Copy ID</button>
+            <button onClick={() => navigator.clipboard.writeText(current.id)}>{t("drawer.copyId")}</button>
             <details
               onToggle={(event) => {
                 if (event.currentTarget.open) refreshServerRevisions();
               }}
             >
-              <summary>History · {serverRevisions.length + revisions.length}</summary>
+              <summary>
+                {t("drawer.history")} · {serverRevisions.length + revisions.length}
+              </summary>
               {serverRevisions.slice(0, 8).map((revision) => (
                 <button key={revision.file} onClick={() => void restoreServerRevision(revision.file)}>
-                  {new Date(revision.at).toLocaleString("en-US")}
+                  {formatDate(revision.at, locale, true)}
                 </button>
               ))}
               {revisions.slice(0, 8).map((revision) => (
                 <button key={revision.at} onClick={() => restoreRevision(revision)}>
-                  {new Date(revision.at).toLocaleString("en-US")}
+                  {formatDate(revision.at, locale, true)}
                 </button>
               ))}
             </details>

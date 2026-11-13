@@ -22,7 +22,10 @@ enum LabConfig {
   /// The one effective PATH: the inherited one plus the usual install dirs. `nodePath` and the child both use it.
   static var searchPath: [String] {
     let inherited = (ProcessInfo.processInfo.environment["PATH"] ?? "").split(separator: ":").map(String.init)
-    return inherited + ["/opt/homebrew/bin", "/usr/local/bin", "\(NSHomeDirectory())/.volta/bin", "/usr/bin"]
+    let home = NSHomeDirectory()
+    return inherited + [
+      "/opt/homebrew/bin", "/usr/local/bin", "\(home)/.volta/bin", "\(home)/.local/bin", "\(home)/.pyenv/shims", "/usr/bin",
+    ]
   }
 
   /// `node` from `searchPath`; no login shell is involved.
@@ -45,12 +48,22 @@ enum LabConfig {
 
   static var appPort: Int { port("port", default: 4173) }
   static var bridgePort: Int { port("bridgePort", default: 4174) }
-  static var cloudflareEnabled: Bool { shareSettings["mode"] as? String == "cloudflare" }
 
-  /// Public URL of a named tunnel (`share.cloudflarePublicUrl`); a Quick Tunnel URL is only printed by `npm run lab -- start`.
-  static var configuredPublicURL: URL? {
-    (shareSettings["cloudflarePublicUrl"] as? String).flatMap(URL.init(string:))
+  /// Output of the lab started by the app: `<data dir>/logs/lab.log`, restarted when it grows past 5 MB.
+  static func labLogHandle() -> FileHandle? {
+    let dir = URL(fileURLWithPath: dataDir).appendingPathComponent("logs")
+    let file = dir.appendingPathComponent("lab.log")
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    let size = (try? FileManager.default.attributesOfItem(atPath: file.path)[.size] as? Int) ?? 0
+    if size > 5_000_000 { try? FileManager.default.removeItem(at: file) }
+    if !FileManager.default.fileExists(atPath: file.path) { FileManager.default.createFile(atPath: file.path, contents: nil) }
+    guard let handle = try? FileHandle(forWritingTo: file) else { return nil }
+    handle.seekToEndOfFile()
+    return handle
   }
+
+  /// Published by the share supervisor of the running lab (`scripts/lib/share-supervisor.mjs`).
+  static var shareStateFile: URL { URL(fileURLWithPath: dataDir).appendingPathComponent("share/state.json") }
 
   /// Ports of the lab servers; other local ports (tests) are left alone.
   static var labPorts: Set<Int> { [appPort, bridgePort] }
@@ -62,9 +75,6 @@ enum LabConfig {
 
   /// Agent bridge (`share.bridgePort`); proxies the app and is the entry point of a shared session.
   static var sharedOrigin: URL { URL(string: "http://127.0.0.1:\(bridgePort)/")! }
-
-  /// `share.mode` (local, lan or cloudflare); the app only starts the lab by itself in `local`.
-  static var shareMode: String { shareSettings["mode"] as? String ?? "local" }
 
   /// Checkout that holds `scripts/lab.mjs`: `WHITEBOARD_STUDIO_ROOT`, the `ProjectDir` default, or the path baked into Info.plist.
   static var projectDir: String {

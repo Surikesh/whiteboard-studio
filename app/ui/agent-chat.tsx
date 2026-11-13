@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PencilBuddy } from "./agent-buddy/pencil-buddy";
 import { AgentSettings } from "./agent-settings";
 import { OPEN_AGENT_SETTINGS_EVENT, chatHint, chatState, chatSubtitle } from "../agent-chat-model.mjs";
+import { useT, useUiLocale } from "../domain/i18n";
+import { dateLocale } from "../domain/locale.mjs";
 
 type AgentImage = { name: string; url: string };
 type ClaimResult = { patch?: unknown; images?: AgentImage[] };
@@ -25,6 +27,8 @@ export function AgentChat({ roomId, getEditor, applyPatch }: { roomId: string; g
   const bridgeAbsent = useRef(false); // /api/agent/* answered 404: no bridge runs (plain `npm start`), so poll rarely
 
   const { configured, enabled, busy } = chatState(status);
+  const t = useT();
+  const locale = useUiLocale();
   const refresh = useCallback(async () => {
     try {
       const statusResponse = await fetch("/api/agent/status", { cache: "no-store" });
@@ -87,7 +91,7 @@ export function AgentChat({ roomId, getEditor, applyPatch }: { roomId: string; g
         .map((shape) => ({ id: shape.id, type: shape.type, x: shape.x, y: shape.y, props: shape.props })) ?? [];
     try {
       const response = await fetch("/api/agent/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ roomId, text: text.trim(), board }) });
-      if (!response.ok) throw new Error((await response.json()).message || "Request failed");
+      if (!response.ok) throw new Error((await response.json()).message || t("chat.requestFailed"));
       setText("");
       await refresh();
     } finally {
@@ -103,7 +107,7 @@ export function AgentChat({ roomId, getEditor, applyPatch }: { roomId: string; g
       <>
         {buddy}
         {settings}
-        <button className={`agent-chat-bubble ${enabled ? "is-enabled" : ""}`} onClick={() => setOpen(true)} aria-label="Open agent chat">
+        <button className={`agent-chat-bubble ${enabled ? "is-enabled" : ""}`} onClick={() => setOpen(true)} aria-label={t("chat.open")}>
           ✦<span />
         </button>
       </>
@@ -113,7 +117,7 @@ export function AgentChat({ roomId, getEditor, applyPatch }: { roomId: string; g
     <>
       {buddy}
       {settings}
-      <section aria-label="Agent chat" className="agent-chat-panel" style={{ transform: `translate(${position.x}px, ${position.y}px)` }}>
+      <section aria-label={t("chat.title")} className="agent-chat-panel" style={{ transform: `translate(${position.x}px, ${position.y}px)` }}>
         <header
           onPointerDown={(event) => {
             drag.current = { x: event.clientX, y: event.clientY, px: position.x, py: position.y };
@@ -127,20 +131,20 @@ export function AgentChat({ roomId, getEditor, applyPatch }: { roomId: string; g
           }}
         >
           <div className="agent-chat-heading">
-            <strong>Agent chat</strong>
+            <strong>{t("chat.title")}</strong>
             <small>
               <i className={enabled ? "on" : ""} />
-              {chatSubtitle(chatState(status))}
+              {chatSubtitle(chatState(status), locale)}
             </small>
           </div>
           <div className="agent-chat-header-actions" onPointerDown={(event) => event.stopPropagation()}>
-            <button onClick={() => setSettingsOpen(true)} title="Agent settings" aria-label="Agent settings">
+            <button onClick={() => setSettingsOpen(true)} title={t("chat.settings")} aria-label={t("chat.settings")}>
               ⚙
             </button>
-            <button onClick={() => void resetContext()} disabled={busy || sending} title="Reset chat context" aria-label="Reset chat context">
+            <button onClick={() => void resetContext()} disabled={busy || sending} title={t("chat.reset")} aria-label={t("chat.reset")}>
               ↻
             </button>
-            <button onClick={() => setOpen(false)} title="Collapse chat" aria-label="Collapse chat">
+            <button onClick={() => setOpen(false)} title={t("chat.collapse")} aria-label={t("chat.collapse")}>
               —
             </button>
           </div>
@@ -148,12 +152,12 @@ export function AgentChat({ roomId, getEditor, applyPatch }: { roomId: string; g
         <div className="agent-chat-messages">
           {!messages.length && (
             <p>
-              {chatHint(chatState(status))}
+              {chatHint(chatState(status), locale)}
               {!enabled && (
                 <>
                   {" "}
                   <button type="button" className="agent-chat-link" onClick={() => setSettingsOpen(true)}>
-                    Open agent settings
+                    {t("chat.openSettings")}
                   </button>
                 </>
               )}
@@ -162,12 +166,13 @@ export function AgentChat({ roomId, getEditor, applyPatch }: { roomId: string; g
           {messages.map((message) => (
             <article key={message.id} className={message.role === "user" ? "user" : message.error ? "error" : "assistant"}>
               <span>{message.text}</span>
-              <time>{new Date(message.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>
+              <time>{new Date(message.at).toLocaleTimeString(dateLocale(locale), { hour: "2-digit", minute: "2-digit" })}</time>
             </article>
           ))}
           {busy && (
             <article className="assistant typing">
-              The agent is working on the task<span>•••</span>
+              {t("chat.working")}
+              <span>•••</span>
             </article>
           )}
         </div>
@@ -181,7 +186,7 @@ export function AgentChat({ roomId, getEditor, applyPatch }: { roomId: string; g
             value={text}
             disabled={!enabled}
             onChange={(event) => setText(event.target.value)}
-            placeholder={enabled ? "What should change on the board?" : configured ? "Agent access is off" : "No AI provider configured"}
+            placeholder={enabled ? t("chat.placeholderReady") : configured ? t("chat.placeholderOff") : t("chat.placeholderNone")}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
@@ -189,7 +194,7 @@ export function AgentChat({ roomId, getEditor, applyPatch }: { roomId: string; g
               }
             }}
           />
-          <button disabled={!enabled || sending || !text.trim()} aria-label="Send">
+          <button disabled={!enabled || sending || !text.trim()} aria-label={t("chat.send")}>
             ↑
           </button>
         </form>

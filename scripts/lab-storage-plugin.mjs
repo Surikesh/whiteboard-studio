@@ -4,7 +4,8 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, unlinkSyn
 import path from "node:path";
 import { ensureDataDirs, labPaths, loadConfig } from "./lib/lab-config.mjs";
 import { guestMayReadAsset } from "./lib/board-assets.mjs";
-import { canonicalPath, isLabPath, isRemoteRequest } from "./lib/remote-request.mjs";
+import { canonicalPath, isLabPath, isRemoteRequest, isWorkspaceListPath } from "./lib/remote-request.mjs";
+import { mergedIndex, resolveDiagramFile } from "./lib/workspace-overlay.mjs";
 import { ASSET_PREFIX, assetContentType, boardFileId, boardFileName, isBoardId, isSafeBasename, revisionFileName, revisionsToPrune, shouldWriteRevision, snapshotToTldr } from "./lib/lab-storage.mjs";
 
 const POLL_MS = 3000;
@@ -37,8 +38,39 @@ export function labStoragePlugin({ projectDir = process.cwd() } = {}) {
         const canonical = canonicalPath(req.url ?? "") ?? "";
         const isLab = isLabPath(canonical);
         const isAsset = url.pathname.startsWith(ASSET_PREFIX);
-        if (!isLab && !isAsset) return next();
-        const remote = isRemoteRequest(req); // any cf-connecting-ip header marks a guest (see remote-request.mjs)
+        // The user's board list and specs (data directory) over the demo ones in public/. This computer only:
+        // tunnel and LAN guests get the plain public/ files, so they never see the user's board titles or specs.
+        if ((req.method === "GET" || req.method === "HEAD") && !isRemoteRequest(req)) {
+          try {
+            if (url.pathname === "/workspace/index.json") {
+              res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+              return res.end(JSON.stringify(mergedIndex(projectDir, paths)));
+            }
+            if (url.pathname.startsWith("/diagrams/")) {
+              const file = resolveDiagramFile(projectDir, paths, url.pathname);
+              if (file && file.startsWith(paths.diagrams + path.sep)) {
+                res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+                return res.end(readFileSync(file));
+              }
+              return next(); // demo files and 404s: the static public/ handler
+            }
+          } catch (error) {
+            warn("workspace overlay", error);
+            res.statusCode = 500;
+            return res.end("Error");
+          }
+        }
+        const remote = isRemoteRequest(req); // any cf-connecting-ip or guest header marks a guest (see remote-request.mjs)
+        if (remote && isWorkspaceListPath(canonical)) {
+          // The board list (titles, projects, tags) is the owner's; the worker repeats this check for tunnel requests.
+          if (req.method === "GET" || req.method === "HEAD") {
+            res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+            return res.end("[]");
+          }
+          res.statusCode = 403;
+          return res.end("Forbidden");
+        }
+        if (!isLab && !isAsset) return next(); // any cf-connecting-ip header marks a guest (see remote-request.mjs)
         if (isLab && remote) {
           res.statusCode = 403;
           return res.end("Forbidden");
@@ -128,8 +160,7 @@ export function labStoragePlugin({ projectDir = process.cwd() } = {}) {
       async function boardIds(base) {
         const ids = new Map();
         try {
-          const index = JSON.parse(readFileSync(path.join(projectDir, "public/workspace/index.json"), "utf8"));
-          for (const d of index) if (isBoardId(d?.id)) ids.set(d.id, d.title);
+          for (const d of mergedIndex(projectDir, paths)) if (isBoardId(d?.id)) ids.set(d.id, d.title);
         } catch {
           /* optional */
         }

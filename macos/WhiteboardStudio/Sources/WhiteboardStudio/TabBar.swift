@@ -18,6 +18,8 @@ final class TabBarView: NSView {
     let agentBusy: Bool
     let agentModel: String?
     let task: String?
+    /// Supervisor status text shown while the link is not ready.
+    let status: String
     let health: LabServer.Health
     let recoveryGaveUp: Bool
   }
@@ -115,12 +117,10 @@ final class TabBarView: NSView {
         cloudButton.toolTip = "Cloudflare sharing is on: \(host)"
       case .unknown, .degraded:
         cloudButton.contentTintColor = .systemYellow
-        cloudButton.toolTip = "Checking access…"
+        cloudButton.toolTip = server.status
       case .down:
         cloudButton.contentTintColor = .systemRed
-        cloudButton.toolTip = server.recoveryGaveUp
-          ? "Cloudflare is unavailable and could not be restored"
-          : "Cloudflare is not responding, restoring…"
+        cloudButton.toolTip = server.status
       }
     } else {
       cloudButton.contentTintColor = nil

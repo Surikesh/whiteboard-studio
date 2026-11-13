@@ -6,6 +6,8 @@ import { OPEN_AGENT_SETTINGS_EVENT } from "../agent-chat-model.mjs";
 import { LIVE_DEMO_ID, documentPath } from "../io/workspace-storage";
 import { LiveShapeWrapper } from "../live-diagram";
 import { createMenuActions, type MenuActionInput } from "../state/menu-actions";
+import { useT } from "../domain/i18n";
+import { MESSAGES } from "../domain/messages.mjs";
 import { WorkspaceBoardSwitcher } from "./board-switcher";
 
 export function useMainMenu(input: MenuActionInput) {
@@ -26,15 +28,8 @@ export function useMainMenu(input: MenuActionInput) {
         "workspace-duplicate": { id: "workspace-duplicate", label: "action.workspace-duplicate", onSelect: () => menuActionsRef.current.duplicateCurrent() },
         "workspace-import": { id: "workspace-import", label: "action.workspace-import", onSelect: () => menuActionsRef.current.importDocument() },
       }),
-      translations: {
-        en: {
-          "action.workspace-open": "Open workspace…",
-          "action.workspace-new": "New diagram",
-          "action.workspace-rename": "Rename…",
-          "action.workspace-duplicate": "Save a copy…",
-          "action.workspace-import": "Import…",
-        },
-      },
+      // tldraw picks the table for its `locale` prop; both come from the shared dictionary.
+      translations: { en: actionTexts("en"), ru: actionTexts("ru") },
     }),
     [],
   );
@@ -44,38 +39,39 @@ export function useMainMenu(input: MenuActionInput) {
       ShapeWrapper: LiveShapeWrapper,
       PageMenu: WorkspaceBoardSwitcher,
       MainMenu: function WorkspaceMainMenu() {
+        const t = useT();
         return (
           <DefaultMainMenu>
-            <TldrawUiMenuGroup id="workspace-file" label="Document">
+            <TldrawUiMenuGroup id="workspace-file" label={t("menu.document")}>
               <TldrawUiMenuActionItem actionId="workspace-open" />
               <TldrawUiMenuActionItem actionId="workspace-new" />
               <TldrawUiMenuActionItem actionId="workspace-rename" />
               <TldrawUiMenuActionItem actionId="workspace-duplicate" />
               <TldrawUiMenuActionItem actionId="workspace-import" />
-              <TldrawUiMenuSubmenu id="insert-spreadsheet" label="Insert spreadsheet">
-                <TldrawUiMenuItem id="insert-empty-spreadsheet" label="New spreadsheet" onSelect={() => menuActionsRef.current.spreadsheet()} />
-                <TldrawUiMenuItem id="import-spreadsheet" label="Import CSV / TSV…" onSelect={() => menuActionsRef.current.spreadsheetImport()} />
+              <TldrawUiMenuSubmenu id="insert-spreadsheet" label={t("menu.insertSpreadsheet")}>
+                <TldrawUiMenuItem id="insert-empty-spreadsheet" label={t("menu.newSpreadsheet")} onSelect={() => menuActionsRef.current.spreadsheet()} />
+                <TldrawUiMenuItem id="import-spreadsheet" label={t("menu.importSpreadsheet")} onSelect={() => menuActionsRef.current.spreadsheetImport()} />
               </TldrawUiMenuSubmenu>
               <TldrawUiMenuItem
                 id="agent-settings"
-                label="Agent settings…"
+                label={t("menu.agentSettings")}
                 onSelect={() => {
                   window.dispatchEvent(new Event(OPEN_AGENT_SETTINGS_EVENT));
                 }}
               />
-              <TldrawUiMenuItem id="live-demo" label="Open the “Live diagram” demo" onSelect={() => window.location.assign(documentPath(LIVE_DEMO_ID))} />
-              <TldrawUiMenuSubmenu id="templates" label="Insert template">
-                <TldrawUiMenuItem id="service-template" label="Service architecture" onSelect={() => menuActionsRef.current.serviceTemplate()} />
+              <TldrawUiMenuItem id="live-demo" label={t("menu.liveDemo")} onSelect={() => window.location.assign(documentPath(LIVE_DEMO_ID))} />
+              <TldrawUiMenuSubmenu id="templates" label={t("menu.insertTemplate")}>
+                <TldrawUiMenuItem id="service-template" label={t("menu.serviceTemplate")} onSelect={() => menuActionsRef.current.serviceTemplate()} />
               </TldrawUiMenuSubmenu>
-              <TldrawUiMenuSubmenu id="export-document" label="Export">
-                <TldrawUiMenuItem id="export-tldr" label="Tldraw document (.tldr)" onSelect={() => menuActionsRef.current.exportTldr()} />
-                <TldrawUiMenuItem id="export-png" label="PNG image" onSelect={() => menuActionsRef.current.exportPng()} />
-                <TldrawUiMenuItem id="export-svg" label="SVG vector" onSelect={() => menuActionsRef.current.exportSvg()} />
-                <TldrawUiMenuItem id="export-json" label="Snapshot JSON" onSelect={() => menuActionsRef.current.exportSnapshot()} />
+              <TldrawUiMenuSubmenu id="export-document" label={t("menu.export")}>
+                <TldrawUiMenuItem id="export-tldr" label={t("menu.exportTldr")} onSelect={() => menuActionsRef.current.exportTldr()} />
+                <TldrawUiMenuItem id="export-png" label={t("menu.exportPng")} onSelect={() => menuActionsRef.current.exportPng()} />
+                <TldrawUiMenuItem id="export-svg" label={t("menu.exportSvg")} onSelect={() => menuActionsRef.current.exportSvg()} />
+                <TldrawUiMenuItem id="export-json" label={t("menu.exportJson")} onSelect={() => menuActionsRef.current.exportSnapshot()} />
               </TldrawUiMenuSubmenu>
-              <TldrawUiMenuItem id="copy-link" label="Copy link" onSelect={() => menuActionsRef.current.copyLink()} />
-              <TldrawUiMenuItem id="copy-id" label="Copy ID" onSelect={() => menuActionsRef.current.copyId()} />
-              <TldrawUiMenuItem id="focus-mode" label="Hide interface" kbd="⌘\\" onSelect={() => menuActionsRef.current.focus()} />
+              <TldrawUiMenuItem id="copy-link" label={t("menu.copyLink")} onSelect={() => menuActionsRef.current.copyLink()} />
+              <TldrawUiMenuItem id="copy-id" label={t("menu.copyId")} onSelect={() => menuActionsRef.current.copyId()} />
+              <TldrawUiMenuItem id="focus-mode" label={t("menu.focus")} kbd="⌘\\" onSelect={() => menuActionsRef.current.focus()} />
             </TldrawUiMenuGroup>
             <DefaultMainMenuContent />
           </DefaultMainMenu>
@@ -85,4 +81,10 @@ export function useMainMenu(input: MenuActionInput) {
     [],
   );
   return { uiOverrides, menuComponents };
+}
+
+const ACTION_KEYS = ["action.workspace-open", "action.workspace-new", "action.workspace-rename", "action.workspace-duplicate", "action.workspace-import"] as const;
+
+function actionTexts(locale: keyof typeof MESSAGES) {
+  return Object.fromEntries(ACTION_KEYS.map((key) => [key, MESSAGES[locale][key]]));
 }

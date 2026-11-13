@@ -32,6 +32,8 @@ npm start       # starts the app and prints its URL
 
 Boards, config and snapshots are stored in `~/WhiteboardStudio-data`. Set `WHITEBOARD_STUDIO_DATA_DIR` to use another folder, for example a throwaway one while trying the app.
 
+Coming from an earlier Tldraw Lab install? With this lab stopped, `npm run lab -- import --from <its data dir> --repo <its checkout>` copies its rooms, `.tldr` exports, revisions, agent assets, chat history, config, board list and diagram specs. The old data is only read, and nothing already in this data directory is replaced unless you pass `--overwrite` (that includes an existing `config.json`), so you can repeat the import later; `--dry-run` shows what would be copied. The import refuses to run while any process (a lab or `npm start` on any port) has files open in this data directory.
+
 > `npm start` runs the development server on purpose. The production server (`vinext start`) is a plain Node process without the Durable Object binding that the sync and workspace routes need, so `/api/workspace` returns 500 there.
 
 ## Two-minute walkthrough
@@ -81,9 +83,9 @@ Layers import in one direction: `ui` to `state` to `domain` to `io`. The browser
 
 ## Agent CLI
 
-The CLI keeps agent-created boards as source specs in the checkout: `public/diagrams/<id>.diagram.json` plus the index `public/workspace/index.json`, which the dev server serves to the app. The first time you open such a board, the app seeds its realtime room from the spec; after that the room, saved in the data directory, is the live copy. `patch` edits the source spec, so it only affects a board that has not been opened yet. To change an opened board, use the layout preflight below. Boards you create in the browser live only in the data directory. Documents are addressed by ID.
+The CLI keeps agent-created boards as source specs in the data directory: `diagrams/<id>.diagram.json` plus the index `workspace/index.json`. The dev server serves them to the app over the demo boards in `public/diagrams` and `public/workspace/index.json` (a user entry or spec with the same id or name wins), only to this computer: tunnel and LAN guests see just the demo list. The first time you open such a board, the app seeds its realtime room from the spec; after that the room, saved in the data directory, is the live copy. `patch` edits the source spec, so it only affects a board that has not been opened yet. To change an opened board, use the layout preflight below. Boards you create in the browser live only in the data directory. Documents are addressed by ID.
 
-The commands print links for the running app. They use `http://localhost:3000` by default; if `npm start` picked another port, set `WHITEBOARD_STUDIO_URL` to the URL it printed (the same variable is used by `npm run test:live`):
+The commands print links for the running app: the lab started with `npm run lab -- start` when it runs, otherwise `http://localhost:3000`. If `npm start` picked another port, set `WHITEBOARD_STUDIO_URL` to the URL it printed (the same variable is used by `npm run test:live`):
 
 ```bash
 export WHITEBOARD_STUDIO_URL=http://localhost:5173
@@ -91,10 +93,10 @@ npm run workspace -- list
 npm run workspace -- show <id>
 npm run workspace -- create public/diagrams/demo-web-architecture.diagram.json --title "My diagram" --project "demo"
 npm run workspace -- patch <id> patch.json
-npm run workspace -- open <id>           # opens the board in the default browser on macOS; add --print to only print the URL
+npm run workspace -- open <id>           # opens the board in the macOS app (whiteboardstudio:// link), else the browser; --print only prints the URL
 ```
 
-`create` needs a `whiteboard-studio/v1` spec; any file in `public/diagrams` is a working sample. The board title also becomes the heading on the canvas. `create` and `patch` write into the checkout (`public/diagrams/<id>.diagram.json` and `public/workspace/index.json`), so they show up in `git status`. `patch.json` accepts `metadata`, a full replacement `spec`, or incremental `addNodes` and `addEdges`, for example:
+`create` needs a `whiteboard-studio/v1` spec; any file in `public/diagrams` is a working sample. The board title also becomes the heading on the canvas. `create` and `patch` write only to the data directory, never into the checkout; patching a demo board stores your copy of its spec and an index entry that overrides the demo one. Saved specs are always written as `whiteboard-studio/v1`; the earlier `tldraw-lab/v1` id is still read. Set `WHITEBOARD_STUDIO_OPEN=browser` to make `open` skip the app. `patch.json` accepts `metadata`, a full replacement `spec`, or incremental `addNodes` and `addEdges`, for example:
 
 ```json
 {
@@ -119,6 +121,8 @@ The last argument is an output prefix, not a folder: it writes `/tmp/layout-pref
 - [VISUAL_STYLE_GUIDE.md](VISUAL_STYLE_GUIDE.md): visual style
 - [WORKSPACE_LAYOUT_PREFLIGHT.md](WORKSPACE_LAYOUT_PREFLIGHT.md): layout preflight protocol
 - [LIVE_DIAGRAM.md](LIVE_DIAGRAM.md): the animated live frame
+- [DIAGRAM_DESIGN_ADOPTION_PLAN.md](DIAGRAM_DESIGN_ADOPTION_PLAN.md): plan for diagram quality checks (slice 1 done)
+- [BACKLOG.md](BACKLOG.md): planned features
 
 ## Optional integrations
 
@@ -137,6 +141,7 @@ Config names:
 - `agent.chat.provider`: `none` (default), `pi`, `codex`, `claude` or `openai-compatible`. The last needs `baseUrl`, `model` and either `apiKeyEnv` (the name of an environment variable holding the key) or `apiKey`. Use `claude` only where your terms allow it.
 - `agent.image.provider`: `none` (default) or `codex`.
 - Default models can be set with `WHITEBOARD_STUDIO_PI_MODEL` and `WHITEBOARD_STUDIO_CODEX_MODEL`.
+- `ui.locale`: `en` (default) or `ru`. Switches the interface language: tldraw menus and dialogs, the library, board switcher, chat panel, live-diagram controls, spreadsheet (Univer) and the comparison-table "Criterion" header, plus date formats and the page `lang`. It is read once when the page loads, so reload after changing it. Agent replies follow the language of each message and use `ui.locale` only when a message has no letters. This setting does not need the agent or a provider.
 
 ```json
 {
@@ -147,11 +152,13 @@ Config names:
 }
 ```
 
-**Sharing through Cloudflare.** `share.mode` in `config.json` is `local` (default), `lan` or `cloudflare`. With `cloudflare`, `npm run lab -- start` starts the app, the agent bridge and a temporary Quick Tunnel; this needs [`cloudflared`](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/). For a named tunnel set `share.cloudflareTunnelToken` and `share.cloudflarePublicUrl`. `npm run dev:share` starts the app on port 4173 (override with `PORT`) together with a Quick Tunnel.
+**Sharing through Cloudflare.** Sharing needs [`cloudflared`](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/). While `npm run lab -- start` runs, `npm run lab -- share on` creates a temporary Quick Tunnel to the bridge, `share off` removes it (and turns agent access off), `share status` shows the state and `share restart` asks for a new link. Add `--wait 150` to block until the link works. With `share.mode: "cloudflare"` in `config.json` the link is turned on at launch; otherwise every launch starts with sharing off. For a named tunnel set `share.cloudflareTunnelToken` (passed to `cloudflared` through the environment, not the command line) and `share.cloudflarePublicUrl`. `npm run dev:share` is a simpler one-shot: the app on port 4173 (override with `PORT`) plus a Quick Tunnel, without the supervisor.
 
-Anyone with a tunnel URL can edit the board, and a Quick Tunnel is neither hosting nor access control. Local agent access stays disabled for shared sessions until you enable it: while it is off, tunnel and LAN guests get `403` on agent chat history, claim, reset, chat and upload, and `/api/agent/status` shows them only `enabled:false`. The `/api/lab/*` routes (board snapshots and revision history) always refuse tunnelled and LAN requests. Guests can fetch an uploaded or generated image only when a stored board references it (an image shape pointing at an asset whose source is that file); the check reads the saved boards on every request, so an edit that adds or removes the image takes effect on the next request, and an upload that no board uses stays private (`404`). With agent access enabled, guests can also read unreferenced `<uuid>.<ext>` files, because they then see agent chat results before those are placed on a board. Nothing else in the data directory is served, and there is no file listing. Do not share boards you would not publish.
+**How the link is kept alive.** The lab owns `cloudflared` and supervises it; the macOS app only reads the result from `<data dir>/share/state.json`. A link is reported as working (`status: ready`) only when `cloudflared` has an edge connection, the public URL answers when resolved through public DNS, and this computer's resolver knows the host (or 90 s after the URL first answered, since macOS may cache a negative answer). After a start, a restart or a wake from sleep, failures are ignored for 90 s; after that, three consecutive failed checks restart `cloudflared` (a Quick Tunnel then gets a new URL). A `cloudflared` that exits is restarted at once. Restarts are spaced 30, 60 and 120 s apart, alternate between QUIC and HTTP/2, and stop after three in 15 minutes (`status: gave-up`; checks continue and `share restart` tries again). Switching sharing off and on, or asking for a restart, never shortens the wait between restarts. A crash of `cloudflared` never stops the app or the bridge.
 
-**macOS app.** `macos/WhiteboardStudio` is a Swift/AppKit shell with its own tab bar around the local server. Build it with `npm run build:mac`, which installs `~/Applications/Whiteboard Studio.app`. Set `BUNDLE_ID` to use your own bundle id (the default is `com.example.whiteboard-studio.app`).
+Anyone with a tunnel URL can edit the board, and a Quick Tunnel is neither hosting nor access control. Local agent access stays disabled for shared sessions until you enable it: while it is off, tunnel and LAN guests get `403` on agent chat history, claim, reset, chat and upload, and `/api/agent/status` shows them only `enabled:false`. The `/api/lab/*` routes (board snapshots and revision history) always refuse tunnelled and LAN requests. The shared board list (`/api/workspace`) answers them with an empty list and refuses changes. LAN guests reach the app through the bridge, which marks them so the app treats them like tunnel guests. A guest who has a board's link (its random ID) can open and edit that board; that is what sharing means here, so share only links to boards you mean to share. Guests can fetch an uploaded or generated image only when a stored board references it (an image shape pointing at an asset whose source is that file); the check reads the saved boards on every request, so an edit that adds or removes the image takes effect on the next request, and an upload that no board uses stays private (`404`). With agent access enabled, guests can also read unreferenced `<uuid>.<ext>` files, because they then see agent chat results before those are placed on a board. Nothing else in the data directory is served, and there is no file listing. Do not share boards you would not publish.
+
+**macOS app.** `macos/WhiteboardStudio` is a Swift/AppKit shell with its own tab bar around the local server. Build it with `npm run build:mac`, which installs `~/Applications/Whiteboard Studio.app`. Set `BUNDLE_ID` to use your own bundle id (the default is `com.example.whiteboard-studio.app`). The app starts the lab (`node scripts/lab.mjs start`, output in `<data dir>/logs/lab.log`) when nothing answers. The cloud button turns the Cloudflare link on and off through `lab share on|off` and copies the link only once it works; the agent button runs `lab agent on|off`. If the whole lab stops while the app had sharing on, the app starts it again and turns the link back on.
 
 ## Troubleshooting
 

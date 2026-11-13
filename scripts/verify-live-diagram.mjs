@@ -115,6 +115,8 @@ try {
     window.__tldrawEditor.redo();
   });
   assert.equal(await page.evaluate(() => window.__tldrawEditor.getShape("shape:live-demo-agent").props.frame), "plain");
+  await page.getByLabel("Frame", { exact: true }).selectOption("bevel");
+  assert.equal(await page.evaluate(() => window.__tldrawEditor.getShape("shape:live-demo-agent").props.frame), "bevel");
   await page.getByLabel("Frame", { exact: true }).selectOption("mat");
   await page.getByText("Styling", { exact: true }).click();
 
@@ -143,6 +145,7 @@ try {
   assert.equal(geometry.bindingCount, 2);
   assert.match(geometry.svg, /data-live-frame="mat"/);
   assert.match(geometry.svg, /data-live-frame="plain"/);
+  assert.match(geometry.svg, /data-live-frame="bevel"/);
   assert.match(geometry.svg, /User/);
   assert.doesNotMatch(geometry.svg, /animateMotion/);
   await writeFile(`${out}/static.svg`, geometry.svg);

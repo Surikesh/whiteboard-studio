@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { getSnapshot, loadSnapshot, parseTldrawJsonFile, serializeTldrawJsonBlob, type Editor } from "tldraw";
+import { t } from "../domain/i18n";
 import { isDiagramSpec, type DiagramSpec } from "../domain/spec/types";
 import { loadDiagramSpec } from "../domain/spec/load-graph";
 import { parseDelimitedText } from "../io/csv";
@@ -149,7 +150,7 @@ export function useDocumentIo({
 
   const renameCurrent = () => {
     if (!current) return;
-    const title = window.prompt("Document title", current.title)?.trim();
+    const title = window.prompt(t("dialog.documentTitle"), current.title)?.trim();
     if (!title || title === current.title) return;
     workspace.updateCurrent({ title });
     const editor = editorRef.current;
@@ -159,7 +160,7 @@ export function useDocumentIo({
   const duplicateCurrent = () => {
     const editor = editorRef.current;
     if (!editor || !current) return;
-    const title = window.prompt("Copy title", `${current.title} (copy)`)?.trim();
+    const title = window.prompt(t("dialog.copyTitle"), t("dialog.copyName", { title: current.title }))?.trim();
     if (!title) return;
     createDocument(documentOnlySnapshot(JSON.parse(JSON.stringify(getSnapshot(editor.store)))), title);
   };
@@ -181,7 +182,7 @@ export function useDocumentIo({
     if (!editor) return;
     const shapes = editor.getCurrentPageShapes();
     if (!shapes.length) {
-      window.alert("Nothing to export on the canvas yet.");
+      window.alert(t("dialog.nothingToExport"));
       return;
     }
     try {
@@ -193,7 +194,7 @@ export function useDocumentIo({
         if (result) downloadBlob(new Blob([result.svg], { type: "image/svg+xml" }), `${current?.title ?? "tldraw"}.svg`);
       }
     } catch (error) {
-      window.alert(`Export failed: ${String(error)}`);
+      window.alert(t("dialog.exportFailed", { error: String(error) }));
     }
   };
 
@@ -210,7 +211,7 @@ export function useDocumentIo({
       } else {
         const payload = JSON.parse(text);
         if (isDiagramSpec(payload)) {
-          const replace = window.confirm("Replace the contents of the current document?\n\nCancel will create a new document.");
+          const replace = window.confirm(t("dialog.replaceOrNew"));
           if (replace) {
             editor.deleteShapes([...editor.getCurrentPageShapeIds()]);
             loadDiagramSpec(editor, payload);
@@ -222,13 +223,13 @@ export function useDocumentIo({
         }
         snapshot = documentOnlySnapshot(payload);
       }
-      const replace = window.confirm("Replace the contents of the current document?\n\nCancel will create a safe copy.");
+      const replace = window.confirm(t("dialog.replaceOrCopy"));
       if (replace) {
         loadSnapshot(editor.store, snapshot as SnapshotInput);
         editor.zoomToFit();
       } else createDocument(snapshot, file.name.replace(/\.(tldr|json)$/i, ""));
     } catch (error) {
-      window.alert(`Failed to import file: ${String(error)}`);
+      window.alert(t("dialog.importFailed", { error: String(error) }));
     } finally {
       if (fileRef.current) fileRef.current.value = "";
     }
@@ -239,7 +240,7 @@ export function useDocumentIo({
     const editor = editorRef.current;
     if (!file || !editor) return;
     const rows = parseDelimitedText(await file.text());
-    if (!rows.length) window.alert("No tabular data found in the file.");
+    if (!rows.length) window.alert(t("dialog.noTable"));
     else addSpreadsheet(editor, { title: file.name.replace(/\.(csv|tsv)$/i, ""), rows });
     input.value = "";
   };
@@ -269,7 +270,7 @@ export function useDocumentIo({
       loadSnapshot(editor.store, documentOnlySnapshot(getSnapshot(result.value)) as Parameters<typeof loadSnapshot>[1]);
       editor.zoomToFit();
     } catch (error) {
-      window.alert(`Failed to restore revision: ${String(error)}`);
+      window.alert(t("dialog.restoreFailed", { error: String(error) }));
     }
   };
   const localRevisionRead = operations.readLocalRevisions();
