@@ -2,7 +2,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, resolve } from "node:path";
 import { labBaseUrl } from "./lib/base-url.mjs";
-import { isSpecShape } from "../app/domain/spec/format.mjs";
+import { isSpecShape, normalizeSpec } from "../app/domain/spec/format.mjs";
 
 const [command, source, destination] = process.argv.slice(2);
 if (command !== "save" || !source) {
@@ -50,6 +50,6 @@ const safeName = (destination ?? basename(source, ".json")).replace(/\.diagram$/
 const directory = resolve("public/diagrams");
 const output = resolve(directory, `${safeName}.diagram.json`);
 await mkdir(directory, { recursive: true });
-await writeFile(output, `${JSON.stringify(spec, null, 2)}\n`);
+await writeFile(output, `${JSON.stringify(normalizeSpec(spec), null, 2)}\n`);
 console.log(output);
 console.log(`${labBaseUrl()}/?diagram=/diagrams/${encodeURIComponent(`${safeName}.diagram.json`)}`);

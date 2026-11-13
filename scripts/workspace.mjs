@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { labBaseUrl } from "./lib/base-url.mjs";
-import { isSpecShape } from "../app/domain/spec/format.mjs";
+import { isSpecShape, normalizeSpec } from "../app/domain/spec/format.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const indexPath = resolve(root, "public/workspace/index.json");
@@ -56,7 +56,7 @@ if (command === "list") {
   const title = option("title", spec.title || "New diagram");
   const now = new Date().toISOString();
   await mkdir(diagramsDir, { recursive: true });
-  await writeFile(resolve(diagramsDir, `${documentId}.diagram.json`), `${JSON.stringify({ ...spec, title }, null, 2)}\n`); // the canvas heading comes from the spec title, so keep it equal to the board title
+  await writeFile(resolve(diagramsDir, `${documentId}.diagram.json`), `${JSON.stringify(normalizeSpec({ ...spec, title }), null, 2)}\n`); // the canvas heading comes from the spec title, so keep it equal to the board title
   const item = {
     id: documentId,
     title,
@@ -90,7 +90,7 @@ if (command === "list") {
   const ids = new Set(nextSpec.nodes.map((node) => node.id));
   if (ids.size !== nextSpec.nodes.length) throw new Error("Patch produced duplicate node IDs");
   for (const edge of nextSpec.edges ?? []) if (!ids.has(edge.from) || !ids.has(edge.to)) throw new Error(`Unknown edge endpoint: ${edge.from} -> ${edge.to}`);
-  await writeFile(specPath, `${JSON.stringify(nextSpec, null, 2)}\n`);
+  await writeFile(specPath, `${JSON.stringify(normalizeSpec(nextSpec), null, 2)}\n`);
   items[at] = { ...item, ...(patch.metadata ?? {}), updatedAt: new Date().toISOString() };
   await saveIndex(items);
   console.log(`${labBaseUrl()}/d/${documentId}`);

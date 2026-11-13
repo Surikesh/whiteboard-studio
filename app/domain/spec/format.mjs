@@ -9,6 +9,11 @@ export function isSpecFormat(format) {
 }
 
 /** True for an object with a known spec format and a `nodes` array. */
+// Specs are always written with the current id; legacy ids are accepted only when reading.
+export function normalizeSpec(spec) {
+  return { ...spec, format: SPEC_FORMAT };
+}
+
 export function isSpecShape(/** @type {any} */ spec) {
   return Boolean(spec) && isSpecFormat(spec.format) && Array.isArray(spec.nodes);
 }
