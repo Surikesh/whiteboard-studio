@@ -310,6 +310,10 @@ async function importCommand(args) {
     console.log(`board list: ${prefix} ${workspace.boards.added.length}, already there ${workspace.boards.kept.length}, demo ids left as demos ${workspace.boards.demo.length}`);
     console.log(`diagram specs: ${prefix} ${workspace.specs.copied.length}, already there ${workspace.specs.skipped.length}, demo names left as demos ${workspace.specs.demo.length}`);
   }
+  const legacyShare = existsSync(legacyConfigFile) ? (readJson(legacyConfigFile).share ?? {}) : {};
+  const clash = [legacyShare.port, legacyShare.bridgePort].filter((port) => port && [config.share.port, config.share.bridgePort].includes(port));
+  if (clash.length)
+    console.log(`warning: the old install also uses port ${clash.join(" and ")}; while it runs, set other share.port / share.bridgePort in ${paths.config}, or the two apps will fight over the ports`);
 }
 
 function lanAddresses() {

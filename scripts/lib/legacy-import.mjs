@@ -187,7 +187,7 @@ function readList(file) {
   }
 }
 
-/** Old config values worth keeping. Ports stay the new defaults so both apps can run side by side. */
+/** Old config values worth keeping. Ports are not taken over: `lab import` warns when they clash with the old install. */
 export function mergeLegacyConfig(current, legacy) {
   const next = structuredClone(current);
   if (legacy?.agent && typeof legacy.agent === "object") {
