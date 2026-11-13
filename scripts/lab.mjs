@@ -83,8 +83,11 @@ async function shareCommand(action, args) {
   }
   let state = readShareState(paths);
   const alive = supervisorAlive(state);
+  // A restart has happened once the supervisor launched cloudflared again.
+  const launchesBefore = state?.launches ?? 0;
   if (action && action !== "status") {
     if (!alive) throw new Error("Whiteboard Studio is not running. Start it with `npm run lab -- start` first.");
+    if (action === "restart" && state.status === "off") throw new Error("The link is off; `lab share on` turns it on.");
     if (action === "on" && !version("cloudflared"))
       throw new Error("`cloudflared` was not found in PATH. Install it: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/");
     if (action === "on") writeFileSync(paths.shareIntent, "");
@@ -94,17 +97,34 @@ async function shareCommand(action, args) {
     }
     if (action === "restart") writeFileSync(paths.shareRestart, String(Date.now()));
   }
-  const want = action === "off" ? (s) => s?.status === "off" : action === "on" || action === "restart" ? (s) => s?.linkReady : null;
+  const want =
+    action === "off"
+      ? (s) => s?.status === "off"
+      : action === "on"
+        ? (s) => s?.linkReady
+        : action === "restart"
+          ? (s) => s?.linkReady && (s.launches ?? 0) > launchesBefore
+          : null;
   const deadline = Date.now() + waitSeconds * 1000;
   // Give the supervisor (2 s tick) a moment to pick up a switch before reporting.
   const settleUntil = Date.now() + (action && action !== "status" ? 3_000 : 0);
+  let lost = false;
   for (;;) {
     state = readShareState(paths);
+    // Never hand out the link of a supervisor that died while we waited.
+    if (alive && !supervisorAlive(state)) {
+      lost = true;
+      break;
+    }
     const t = Date.now();
     if (t >= settleUntil && (!want || !waitSeconds || want(state) || t >= deadline)) break;
     await sleep(500);
   }
-  if (!alive) state = null;
+  if (!supervisorAlive(state)) state = null;
+  if (lost) {
+    console.error("Whiteboard Studio stopped while waiting for the link.");
+    process.exitCode = 1;
+  }
   console.log(asJson ? JSON.stringify(state) : describeShare(state));
   if (want && waitSeconds > 0 && !want(state)) process.exitCode = 1;
 }

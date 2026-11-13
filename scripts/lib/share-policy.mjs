@@ -5,7 +5,11 @@
 // - After a (re)start of cloudflared and after the Mac wakes up, probe failures are ignored for `graceMs`.
 // - Only `failuresToAct` new consecutive failures after the grace period trigger a restart.
 // - Restarts are spaced by `backoffMs` and limited to `budget` per `budgetWindowMs`; when the budget is
-//   spent the supervisor reports `gave-up` and keeps probing. A user action never resets the backoff.
+//   spent the supervisor reports `gave-up` and keeps probing. A user action never resets the backoff:
+//   every launch after the first one (switching off and on, `restart`, a crash) takes the next backoff
+//   step and is recorded; only automatic restarts are refused once the budget is spent.
+// - A probe failure takes the link out of `ready` at once, even inside the grace period (it only stops
+//   counting towards a restart there), so a dead URL is never handed out.
 // - The link is announced (`ready`) only once the public URL answers and the local resolver knows it,
 //   or `systemDnsWaitMs` after it first answered (the Mac's resolver may cache a negative answer).
 
@@ -28,7 +32,8 @@ export function initialState() {
     attempt: 0, // restarts within the current incident; selects the backoff step
     restarts: [], // timestamps of restarts, for the budget
     nextRestartAt: 0,
-    pending: null, // "start" | "restart" waiting for the backoff to pass
+    pending: null, // waiting for the backoff: "start" (switched on), "restart" (automatic), "manual" (asked for)
+    launches: 0, // cloudflared launches in this lab session
     firstOkAt: null,
     localDns: false,
     lastError: null,
@@ -43,11 +48,13 @@ function set(state, patch, now) {
   return next;
 }
 
-// Launch (or relaunch) cloudflared now.
-function launch(state, now, { restart }) {
-  const restarts = restart ? [...state.restarts, now] : state.restarts;
-  const attempt = restart ? state.attempt + 1 : state.attempt;
-  const backoff = restart ? POLICY.backoffMs[Math.min(attempt - 1, POLICY.backoffMs.length - 1)] : 0;
+// Launch cloudflared now. Every launch but the first is a relaunch: it is recorded for the budget and
+// moves the backoff one step, whatever caused it.
+function launch(state, now) {
+  const relaunch = state.launches > 0;
+  const restarts = relaunch ? [...inWindow(state.restarts, now), now] : state.restarts;
+  const attempt = relaunch ? state.attempt + 1 : state.attempt;
+  const backoff = relaunch ? POLICY.backoffMs[Math.min(attempt - 1, POLICY.backoffMs.length - 1)] : 0;
   return {
     state: set(
       state,
@@ -60,12 +67,13 @@ function launch(state, now, { restart }) {
         restarts,
         nextRestartAt: Math.max(state.nextRestartAt, now + backoff),
         pending: null,
+        launches: state.launches + 1,
         firstOkAt: null,
         localDns: false,
       },
       now,
     ),
-    actions: restart ? ["kill", "spawn"] : ["spawn"],
+    actions: ["kill", "spawn"],
   };
 }
 
@@ -77,8 +85,8 @@ function inWindow(restarts, now) {
 function requestRestart(state, now, { manual }) {
   const restarts = inWindow(state.restarts, now);
   if (!manual && restarts.length >= POLICY.budget) return { state: set(state, { status: "gave-up", restarts, pending: null }, now), actions: [] };
-  if (now < state.nextRestartAt) return { state: set(state, { status: "restarting", restarts, pending: "restart" }, now), actions: [] };
-  return launch({ ...state, restarts }, now, { restart: true });
+  if (now < state.nextRestartAt) return { state: set(state, { status: "restarting", restarts, pending: manual ? "manual" : "restart" }, now), actions: [] };
+  return launch({ ...state, restarts }, now);
 }
 
 export function step(state, event) {
@@ -87,7 +95,7 @@ export function step(state, event) {
     case "enable":
       if (running(state)) return { state, actions: [] }; // already on: nothing to reset
       if (now < state.nextRestartAt) return { state: set(state, { status: "restarting", pending: "start", failures: 0, url: null }, now), actions: [] };
-      return launch(state, now, { restart: false });
+      return launch(state, now);
     case "disable":
       if (!running(state)) return { state, actions: [] };
       // Keep the restart history and the backoff: switching off and on again is a user action, too.
@@ -111,11 +119,12 @@ export function step(state, event) {
       };
     case "restart":
       if (!running(state)) return { state, actions: [] };
-      if (state.status === "restarting") return { state, actions: [] }; // already queued, the backoff stands
+      // Already queued: the backoff stands, but an automatic restart becomes one the user asked for.
+      if (state.status === "restarting") return { state: state.pending === "restart" ? { ...state, pending: "manual" } : state, actions: [] };
       return requestRestart(state, now, { manual: true });
     case "tick":
       if (state.status === "restarting" && state.pending && now >= state.nextRestartAt) {
-        return launch({ ...state, restarts: inWindow(state.restarts, now) }, now, { restart: state.pending === "restart" });
+        return launch(state, now);
       }
       return { state, actions: [] };
     case "probe":
@@ -128,7 +137,8 @@ export function step(state, event) {
 function probe(state, { now, ok, localDns, error }) {
   if (!running(state)) return { state, actions: [] };
   if (state.status === "restarting") {
-    // The old process still runs while the backoff passes; if it recovers by itself, keep it.
+    // The old process still runs while the backoff passes; if it recovers by itself, keep it (unless the
+    // user asked for a new link).
     if (ok && localDns && state.url && state.pending === "restart")
       return { state: set(state, { status: "ready", pending: null, failures: 0, attempt: 0, localDns: true, lastError: null }, now), actions: [] };
     return { state, actions: [] };
@@ -145,7 +155,8 @@ function probe(state, { now, ok, localDns, error }) {
     return { state: set(state, { ...patch, status: "ready", attempt: 0 }, now), actions: [] };
   }
   const reason = error ?? (state.url ? "public link does not answer" : "no public URL yet");
-  if (now < state.graceUntil) return { state: { ...state, lastError: reason, firstOkAt: null }, actions: [] };
+  if (now < state.graceUntil)
+    return { state: set(state, { lastError: reason, firstOkAt: null, localDns: false, status: state.status === "ready" ? "checking" : state.status }, now), actions: [] };
   const failures = state.failures + 1;
   const degraded = set(state, { failures, lastError: reason, firstOkAt: null, status: state.status === "gave-up" ? "gave-up" : "degraded" }, now);
   if (failures < POLICY.failuresToAct) return { state: degraded, actions: [] };
@@ -163,6 +174,8 @@ export function publicView(state) {
     graceUntil: state.graceUntil || null,
     nextRestartAt: state.nextRestartAt || null,
     restartsInWindow: state.restarts.length,
+    launches: state.launches,
+    pending: state.pending,
     localDns: state.localDns,
     lastError: state.lastError,
   };

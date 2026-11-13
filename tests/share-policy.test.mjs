@@ -38,7 +38,7 @@ function machine() {
 
 test("enable spawns cloudflared once; a second enable changes nothing", () => {
   const m = machine();
-  assert.deepEqual(m.send({ type: "enable" }), ["spawn"]);
+  assert.deepEqual(m.send({ type: "enable" }), ["kill", "spawn"]);
   assert.equal(m.state.status, "starting");
   const before = m.state;
   assert.deepEqual(m.send({ type: "enable" }), []);
@@ -81,7 +81,7 @@ test("failures inside the start grace period never trigger a restart", () => {
     m.advance(5_000);
   }
   assert.ok(m.now - 1_000_000 < POLICY.graceMs);
-  assert.deepEqual(m.actions, ["spawn"]);
+  assert.deepEqual(m.actions, ["kill", "spawn"]);
   assert.equal(m.state.failures, 0);
 });
 
@@ -102,9 +102,9 @@ test("after a wake: 90 s grace, then three new consecutive failures before a res
   m.send({ type: "probe", ok: false });
   m.send({ type: "probe", ok: false });
   assert.equal(m.state.status, "degraded");
-  assert.deepEqual(m.actions, ["spawn", "probe"]);
+  assert.deepEqual(m.actions, ["kill", "spawn", "probe"]);
   m.send({ type: "probe", ok: false });
-  assert.deepEqual(m.actions, ["spawn", "probe", "kill", "spawn"]);
+  assert.deepEqual(m.actions, ["kill", "spawn", "probe", "kill", "spawn"]);
   assert.equal(m.state.status, "starting");
 });
 
@@ -118,7 +118,7 @@ test("a success between failures starts the count again", () => {
   m.send({ type: "probe", ok: false });
   m.send({ type: "probe", ok: false });
   assert.equal(m.state.status, "degraded");
-  assert.deepEqual(m.actions, ["spawn"]);
+  assert.deepEqual(m.actions, ["kill", "spawn"]);
 });
 
 test("restarts back off 30/60/120 s and give up after three in 15 minutes", () => {
@@ -155,16 +155,16 @@ test("a dead cloudflared inside the backoff waits for it; the restart then runs 
   const m = machine();
   m.up();
   m.send({ type: "exited" });
-  assert.deepEqual(m.actions, ["spawn", "kill", "spawn"]);
+  assert.deepEqual(m.actions, ["kill", "spawn", "kill", "spawn"]);
   m.advance(5_000);
   m.send({ type: "exited" });
   assert.equal(m.state.status, "restarting");
-  assert.deepEqual(m.actions, ["spawn", "kill", "spawn"]);
+  assert.deepEqual(m.actions, ["kill", "spawn", "kill", "spawn"]);
   m.advance(20_000);
   assert.equal(m.state.status, "restarting");
   m.advance(5_000);
   assert.equal(m.state.status, "starting");
-  assert.deepEqual(m.actions, ["spawn", "kill", "spawn", "kill", "spawn"]);
+  assert.deepEqual(m.actions, ["kill", "spawn", "kill", "spawn", "kill", "spawn"]);
   assert.equal(m.state.nextRestartAt - m.now, 60_000);
 });
 
@@ -203,20 +203,81 @@ test("a manual restart after giving up is allowed once the backoff passed", () =
   assert.equal(m.state.status, "starting");
 });
 
-test("while a restart waits, a recovered old process is kept", () => {
+test("while an automatic restart waits, a recovered old process is kept", () => {
   const m = machine();
   m.up();
-  m.advance(POLICY.graceMs);
-  m.send({ type: "exited" }); // immediate restart #1
+  m.send({ type: "exited" }); // relaunch #1, the next one is allowed in 30 s
   m.send({ type: "url", url: URL });
-  m.send({ type: "probe", ok: true, localDns: true });
-  m.advance(POLICY.graceMs - 80_000);
-  m.send({ type: "restart" }); // inside the 30 s backoff? no: 10 s elapsed, so it waits
-  assert.equal(m.state.status, "restarting");
+  m.advance(5_000);
+  m.send({ type: "exited" }); // automatic restart waits for the backoff
+  assert.equal(m.state.pending, "restart");
+  m.send({ type: "url", url: URL });
   m.send({ type: "probe", ok: true, localDns: true });
   assert.equal(m.state.status, "ready");
   m.advance(60_000);
   assert.equal(m.state.status, "ready", "the cancelled restart does not run later");
+  assert.equal(m.state.launches, 2);
+});
+
+test("a restart the user asked for is not cancelled by a working probe", () => {
+  const m = machine();
+  m.up();
+  m.send({ type: "exited" }); // relaunch #1, next allowed in 30 s
+  m.send({ type: "url", url: URL });
+  m.send({ type: "probe", ok: true, localDns: true });
+  m.advance(10_000);
+  m.send({ type: "restart" });
+  assert.equal(m.state.pending, "manual");
+  m.send({ type: "probe", ok: true, localDns: true });
+  assert.equal(m.state.status, "restarting");
+  m.advance(20_000);
+  assert.equal(m.state.status, "starting");
+  assert.equal(m.state.launches, 3);
+});
+
+test("an automatic restart in the queue becomes a manual one when the user asks", () => {
+  const m = machine();
+  m.up();
+  m.send({ type: "exited" });
+  m.advance(1_000);
+  m.send({ type: "exited" });
+  assert.equal(m.state.pending, "restart");
+  m.send({ type: "restart" });
+  assert.equal(m.state.pending, "manual");
+  m.send({ type: "url", url: URL });
+  m.send({ type: "probe", ok: true, localDns: true });
+  assert.equal(m.state.status, "restarting");
+});
+
+test("switching off and on repeatedly walks the backoff and counts against the budget", () => {
+  const m = machine();
+  m.up();
+  m.send({ type: "disable" });
+  m.send({ type: "enable" }); // relaunch #1: nothing to wait for yet
+  assert.equal(m.state.status, "starting");
+  assert.equal(m.state.restarts.length, 1);
+  assert.equal(m.state.nextRestartAt - m.now, 30_000);
+  m.send({ type: "disable" });
+  m.send({ type: "enable" });
+  assert.equal(m.state.status, "restarting");
+  assert.equal(m.state.pending, "start");
+  m.advance(30_000);
+  assert.equal(m.state.status, "starting");
+  assert.equal(m.state.restarts.length, 2);
+  assert.equal(m.state.nextRestartAt - m.now, 60_000);
+  assert.equal(m.actions.filter((a) => a === "spawn").length, 3);
+});
+
+test("a failure inside the grace period takes the link out of ready without counting", () => {
+  const m = machine();
+  m.up();
+  assert.equal(publicView(m.state).linkReady, true);
+  m.send({ type: "probe", ok: false });
+  assert.equal(m.state.status, "checking");
+  assert.equal(publicView(m.state).linkReady, false);
+  assert.equal(m.state.failures, 0);
+  m.send({ type: "probe", ok: true, localDns: true });
+  assert.equal(publicView(m.state).linkReady, true);
 });
 
 test("disable kills cloudflared and hides the link", () => {
