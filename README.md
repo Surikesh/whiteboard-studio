@@ -119,6 +119,8 @@ The last argument is an output prefix, not a folder: it writes `/tmp/layout-pref
 - [VISUAL_STYLE_GUIDE.md](VISUAL_STYLE_GUIDE.md): visual style
 - [WORKSPACE_LAYOUT_PREFLIGHT.md](WORKSPACE_LAYOUT_PREFLIGHT.md): layout preflight protocol
 - [LIVE_DIAGRAM.md](LIVE_DIAGRAM.md): the animated live frame
+- [DIAGRAM_DESIGN_ADOPTION_PLAN.md](DIAGRAM_DESIGN_ADOPTION_PLAN.md): plan for diagram quality checks (slice 1 done)
+- [BACKLOG.md](BACKLOG.md): planned features
 
 ## Optional integrations
 
