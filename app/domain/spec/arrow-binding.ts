@@ -1,5 +1,5 @@
 import { type Editor, type createShapeId } from "tldraw";
-import { getSpecNodeSize, type DiagramSpec } from "./types";
+import { getSpecNodeSize, type DiagramSpec, type SpecAnchor } from "./types";
 
 export function bindSpecArrow(
   editor: Editor,
@@ -8,6 +8,8 @@ export function bindSpecArrow(
   toId: ReturnType<typeof createShapeId>,
   from: DiagramSpec["nodes"][number],
   to: DiagramSpec["nodes"][number],
+  fromAnchor?: SpecAnchor,
+  toAnchor?: SpecAnchor,
 ) {
   const fromSize = getSpecNodeSize(from);
   const toSize = getSpecNodeSize(to);
@@ -22,8 +24,8 @@ export function bindSpecArrow(
   const startAnchor = horizontal ? { x: dx >= 0 ? 1 : 0, y: 0.5 } : { x: 0.5, y: dy >= 0 ? 1 : 0 };
   const endAnchor = horizontal ? { x: dx >= 0 ? 0 : 1, y: 0.5 } : { x: 0.5, y: dy >= 0 ? 0 : 1 };
   for (const [terminal, shapeId, normalizedAnchor] of [
-    ["start", fromId, startAnchor],
-    ["end", toId, endAnchor],
+    ["start", fromId, fromAnchor ?? startAnchor],
+    ["end", toId, toAnchor ?? endAnchor],
   ] as const) {
     editor.createBinding({
       type: "arrow",

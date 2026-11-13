@@ -11,6 +11,7 @@ const typeCounts = (editor) => Object.fromEntries([...Map.groupBy(editor.getCurr
 test("isDiagramSpec accepts only whiteboard-studio/v1 specs with nodes (and a full sequence)", () => {
   const { isDiagramSpec } = lab.app;
   assert.equal(isDiagramSpec({ format: "whiteboard-studio/v1", nodes: [] }), true);
+  assert.equal(isDiagramSpec({ format: "tldraw-lab/v1", nodes: [] }), true, "earlier format id still loads");
   assert.equal(isDiagramSpec({ format: "other", nodes: [] }), false);
   assert.equal(isDiagramSpec({ format: "whiteboard-studio/v1" }), false);
   assert.equal(isDiagramSpec(null), false);
@@ -52,7 +53,7 @@ test("graph loader: node kinds map to service, asset (unknown kind falls back), 
     format: "whiteboard-studio/v1",
     nodes: [
       { id: "svc", label: "Svc", x: 0, y: 0, kind: "service", technology: "Go" },
-      { id: "old", label: "Old", x: 300, y: 0, kind: "asset", assetKind: "jira" },
+      { id: "old", label: "Old", x: 300, y: 0, kind: "asset", assetKind: "no-such-kind" },
       { id: "bare", label: "Bare", x: 600, y: 0, kind: "asset" },
       { id: "txt", label: "Text", x: 0, y: 300, kind: "text" },
       { id: "div", label: "", x: 300, y: 300, kind: "divider" },
@@ -64,6 +65,28 @@ test("graph loader: node kinds map to service, asset (unknown kind falls back), 
   assert.deepEqual(assets.map((shape) => shape.props.kind).sort(), ["generic", "server"]);
   assert.equal(shapesOfType(editor, "text").length, 1);
   assert.equal(shapesOfType(editor, "line").length, 1);
+});
+
+test("graph loader: edges keep dash, both arrowheads and explicit anchors", () => {
+  const editor = fresh();
+  lab.app.loadDiagramSpec(editor, {
+    format: "tldraw-lab/v1",
+    nodes: [
+      { id: "a", label: "A", x: 0, y: 0 },
+      { id: "b", label: "B", x: 0, y: 400 },
+    ],
+    edges: [
+      { from: "a", to: "b", dash: "dotted", bidirectional: true, fromAnchor: { x: 0.25, y: 1 }, toAnchor: { x: 0.75, y: 0 } },
+      { from: "a", to: "b", dash: "wavy", fromAnchor: { x: 2, y: 0 } },
+    ],
+  });
+  const [first, second] = shapesOfType(editor, "arrow").sort((left, right) => left.id.localeCompare(right.id));
+  assert.equal(first.props.dash, "dotted");
+  assert.equal(first.props.arrowheadStart, "arrow");
+  const anchors = (arrow) => Object.fromEntries(bindingsFrom(editor, [arrow]).map((binding) => [binding.props.terminal, binding.props.normalizedAnchor]));
+  assert.deepEqual(anchors(first), { start: { x: 0.25, y: 1 }, end: { x: 0.75, y: 0 } });
+  assert.equal(second.props.dash, "draw", "unknown dash keeps the default");
+  assert.deepEqual(anchors(second), { start: { x: 0.5, y: 1 }, end: { x: 0.5, y: 0 } }, "invalid anchor falls back to the automatic side");
 });
 
 test("graph loader: unknown edge endpoint throws", () => {

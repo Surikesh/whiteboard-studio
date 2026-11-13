@@ -2,7 +2,7 @@
 
 import { Editor, createShapeId, useValue } from "tldraw";
 import { useState } from "react";
-import { ASSET_KINDS, type AssetKind } from "../domain/asset-kinds";
+import { ASSET_KINDS, LEGACY_ASSET_KINDS, type AssetKind } from "../domain/asset-kinds";
 import { assetCatalog } from "../domain/asset-catalog";
 import { AssetIcon } from "../domain/icons";
 import { ASSET_TYPE } from "../domain/shapes/types";
@@ -15,7 +15,7 @@ export function ComponentLibrary({ editor, open, onClose }: { editor: Editor; op
   const selectedCount = useValue("selected component shapes", () => editor.getSelectedShapeIds().length, [editor]);
   if (!open) return null;
   const needle = query.trim().toLowerCase();
-  const kinds = ASSET_KINDS.filter((kind) => `${assetCatalog[kind].label} ${assetCatalog[kind].group} ${kind}`.toLowerCase().includes(needle));
+  const kinds = ASSET_KINDS.filter((kind) => !LEGACY_ASSET_KINDS.includes(kind) && `${assetCatalog[kind].label} ${assetCatalog[kind].group} ${kind}`.toLowerCase().includes(needle));
   const saved = savedComponents.filter((item) => item.name.toLowerCase().includes(needle));
   const insertAsset = (kind: AssetKind) => {
     const center = editor.getViewportPageBounds().center;

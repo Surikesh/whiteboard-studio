@@ -6,6 +6,7 @@ import os from "node:os";
 import { existsSync } from "node:fs";
 import httpProxy from "http-proxy";
 import { guestMayReadAsset } from "./lib/board-assets.mjs";
+import { isSpecShape } from "../app/domain/spec/format.mjs";
 import { agentRouteAccess, canonicalPath, isLabPath, isRemoteRequest } from "./lib/remote-request.mjs";
 import { labPaths, loadConfig, ensureDataDirs } from "./lib/lab-config.mjs";
 import {
@@ -214,7 +215,7 @@ function extractPatch(text) {
   if (!match) return null;
   try {
     const patch = JSON.parse(match[1]);
-    return patch?.format === "whiteboard-studio/v1" && Array.isArray(patch.nodes) ? patch : null;
+    return isSpecShape(patch) ? patch : null;
   } catch {
     return null;
   }

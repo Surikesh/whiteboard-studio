@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { labBaseUrl } from "./lib/base-url.mjs";
+import { isSpecShape } from "../app/domain/spec/format.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const indexPath = resolve(root, "public/workspace/index.json");
@@ -47,7 +48,7 @@ if (command === "list") {
 } else if (command === "create") {
   if (!args[0]) usage();
   const spec = await readJson(resolve(args[0]), null);
-  if (spec?.format !== "whiteboard-studio/v1" || !Array.isArray(spec.nodes))
+  if (!isSpecShape(spec))
     throw new Error(
       `Expected a whiteboard-studio/v1 spec: "format" must be "whiteboard-studio/v1" and "nodes" must be an array (got format=${JSON.stringify(spec?.format)}, nodes=${Array.isArray(spec?.nodes) ? "array" : typeof spec?.nodes}). Try public/diagrams/demo-web-architecture.diagram.json`,
     );
@@ -85,7 +86,7 @@ if (command === "list") {
     nodes: [...(spec.nodes ?? []), ...(patch.addNodes ?? [])],
     edges: [...(spec.edges ?? []), ...(patch.addEdges ?? [])],
   };
-  if (nextSpec?.format !== "whiteboard-studio/v1" || !Array.isArray(nextSpec.nodes)) throw new Error("Patch produced an invalid spec");
+  if (!isSpecShape(nextSpec)) throw new Error("Patch produced an invalid spec");
   const ids = new Set(nextSpec.nodes.map((node) => node.id));
   if (ids.size !== nextSpec.nodes.length) throw new Error("Patch produced duplicate node IDs");
   for (const edge of nextSpec.edges ?? []) if (!ids.has(edge.from) || !ids.has(edge.to)) throw new Error(`Unknown edge endpoint: ${edge.from} -> ${edge.to}`);

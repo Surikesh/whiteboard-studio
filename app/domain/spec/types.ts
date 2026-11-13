@@ -1,7 +1,9 @@
 import { editableTextBoxHeight } from "../shapes/text-height";
+import { isSpecFormat } from "./format.mjs";
 
 export type DiagramSpec = {
-  format: "whiteboard-studio/v1";
+  /** `whiteboard-studio/v1`; the earlier `tldraw-lab/v1` id is accepted on read. */
+  format: "whiteboard-studio/v1" | "tldraw-lab/v1";
   title?: string;
   intent?: string;
   focusQuestion?: string;
@@ -28,13 +30,27 @@ export type DiagramSpec = {
     owner?: string;
     status?: "healthy" | "warning" | "critical";
   }>;
-  edges?: Array<{ from: string; to: string; label?: string; color?: DiagramSpec["nodes"][number]["color"]; relation?: "supports" | "opposes" | "positive" | "negative" | "yes" | "no" }>;
+  edges?: Array<{
+    from: string;
+    to: string;
+    label?: string;
+    color?: DiagramSpec["nodes"][number]["color"];
+    relation?: "supports" | "opposes" | "positive" | "negative" | "yes" | "no";
+    dash?: "dashed" | "dotted";
+    /** Arrowheads on both ends. */
+    bidirectional?: boolean;
+    /** Normalized attach points (0..1 on each axis) that override the automatic side choice. */
+    fromAnchor?: SpecAnchor;
+    toAnchor?: SpecAnchor;
+  }>;
 };
+
+export type SpecAnchor = { x: number; y: number };
 
 export function isDiagramSpec(value: unknown): value is DiagramSpec {
   if (!value || typeof value !== "object") return false;
   const spec = value as Partial<DiagramSpec>;
-  if (spec.format !== "whiteboard-studio/v1" || !Array.isArray(spec.nodes)) return false;
+  if (!isSpecFormat(spec.format) || !Array.isArray(spec.nodes)) return false;
   if (spec.diagramType !== "sequence") return true;
   return Boolean(spec.sequence && Array.isArray(spec.sequence.participants) && Array.isArray(spec.sequence.messages));
 }

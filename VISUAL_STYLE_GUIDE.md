@@ -30,11 +30,15 @@ Use this shape in a `whiteboard-studio/v1` spec:
 
 Current reusable `assetKind` values:
 
-- General: `person`, `database`, `server`, `web-host` (browser window with web code), `cloud`, `api`, `queue`, `brain`, `switch` (router).
-- Process and organization: `form`, `choice`, `workflow`, `metrics`, `approval`, `plan`.
-- Architecture and deployment: `environment` (stacked deployment layers marked with a stage flag), `warning`.
-- Source control: `git-rebase` (a commit branch replayed onto another base).
-- Technologies: `docker`, `kubernetes`, `nginx`, `redis`, `elastic`, `linux`, `windows`.
+- People: `person`, `applicant` (requester with a form), `architect`, `support-engineer`, `infra-admin`, `operator` (person at a terminal), `organization` (teams and units).
+- General: `database`, `server`, `web-host` (browser window with web code), `cloud`, `api`, `queue`, `brain`, `switch` (router), `file-exchange`, `archive`, `app-window` (application window with a chat), `lazy-download` (on-demand download).
+- Process and organization: `factory` (process or engine), `form`, `choice`, `workflow`, `roadmap`, `metrics`, `approval`, `evidence`, `plan`, `registry` (architecture registry), `jira`.
+- Agents: `context`, `session`, `toolbox`, `routing-layer`, `preset-authoring`, `focused-work`, `harness-settings`, `harness-files`, `orchestrator`, `skill`.
+- Network: `service-catalog`, `network-zones`, `policy-catalog`, `netpolicy`.
+- Architecture and deployment: `environment` (stacked deployment layers marked with a stage flag), `compose`, `warning`.
+- Source control and CI/CD: `git-rebase` (a commit branch replayed onto another base), `gitlab`, `runner`, `quality`, `verification`, `artifactory`, `cleanup`, `release`, `symlink` (version switch), `package-replace`.
+- Technologies: `docker`, `kubernetes`, `nginx`, `redis`, `celery`, `elastic`, `ansible`, `suse`, `vmware`, `linux`, `windows`, `apple`, `service-manager`.
+- Legacy (renders on older boards, not offered in the library): `runtime`.
 
 An unknown or removed `assetKind` in a spec or a stored board renders as a neutral box with the stored label; it never fails to load.
 

@@ -1,11 +1,18 @@
 import { type Editor, type IndexKey, createShapeId, toRichText } from "tldraw";
 import { resolveAssetKind } from "../asset-kinds";
 import { ASSET_TYPE, SERVICE_TYPE } from "../shapes/types";
-import { type DiagramSpec, getSpecNodeSize } from "./types";
+import { type DiagramSpec, type SpecAnchor, getSpecNodeSize } from "./types";
 import { clearTransientCanvasOverlays } from "./helpers";
 import { bindSpecArrow } from "./arrow-binding";
 import { loadSequenceSpec } from "./load-sequence";
 import { loadTableSpec } from "./load-table";
+
+/** A spec anchor inside the shape's unit square, or undefined to let the binder choose a side. */
+function validAnchor(anchor: SpecAnchor | undefined): SpecAnchor | undefined {
+  if (!anchor) return undefined;
+  const inUnit = (value: unknown) => typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1;
+  return inUnit(anchor.x) && inUnit(anchor.y) ? { x: anchor.x, y: anchor.y } : undefined;
+}
 
 export function loadDiagramSpec(editor: Editor, spec: DiagramSpec) {
   if (spec.diagramType === "sequence") {
@@ -109,9 +116,11 @@ export function loadDiagramSpec(editor: Editor, spec: DiagramSpec) {
                 ? "green"
                 : (edge.color ?? "black"),
           richText: toRichText(edge.label ?? edge.relation ?? ""),
+          ...(edge.dash === "dashed" || edge.dash === "dotted" ? { dash: edge.dash } : {}),
+          ...(edge.bidirectional ? { arrowheadStart: "arrow" as const } : {}),
         },
       });
-      bindSpecArrow(editor, arrowId, fromId, toId, from, to);
+      bindSpecArrow(editor, arrowId, fromId, toId, from, to, validAnchor(edge.fromAnchor), validAnchor(edge.toAnchor));
     }
   });
   editor.zoomToFit({ animation: { duration: 350 } });

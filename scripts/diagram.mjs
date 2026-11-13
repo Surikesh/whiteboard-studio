@@ -2,6 +2,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, resolve } from "node:path";
 import { labBaseUrl } from "./lib/base-url.mjs";
+import { isSpecShape } from "../app/domain/spec/format.mjs";
 
 const [command, source, destination] = process.argv.slice(2);
 if (command !== "save" || !source) {
@@ -10,7 +11,7 @@ if (command !== "save" || !source) {
 }
 
 const spec = JSON.parse(await readFile(resolve(source), "utf8"));
-if (spec?.format !== "whiteboard-studio/v1" || !Array.isArray(spec.nodes)) {
+if (!isSpecShape(spec)) {
   throw new Error('Expected { "format": "whiteboard-studio/v1", "nodes": [...] }');
 }
 const nodeIds = new Set();
