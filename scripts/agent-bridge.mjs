@@ -9,6 +9,8 @@ import { guestMayReadAsset } from "./lib/board-assets.mjs";
 import { isSpecShape } from "../app/domain/spec/format.mjs";
 import { agentRouteAccess, canonicalPath, isLabPath, isRemoteRequest } from "./lib/remote-request.mjs";
 import { labPaths, loadConfig, ensureDataDirs } from "./lib/lab-config.mjs";
+import { isImageRequest, needsImageHandoff, replyLanguage, replyStrings } from "./lib/agent-language.mjs";
+import { uiLocaleFromConfig } from "../app/domain/locale.mjs";
 import {
   chatModel,
   imageModel,
@@ -90,12 +92,6 @@ async function bodyBuffer(req) {
   }
   return Buffer.concat(chunks);
 }
-function isImageRequest(text) {
-  const value = text.toLowerCase();
-  if (/diagram|chart|graph|flowchart|sequence|flowchart|architecture|mind.?map/.test(value)) return false;
-  return /picture|image\b|illustrat|photo|portrait|mascot|sticker|avatar|logo|pencil|watercolor|artwork|\bart\b|draw me|generate/.test(value);
-}
-
 function runProcess(command, args, { cwd, input, timeoutMs = PROVIDER_TIMEOUT_MS, label, env } = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { cwd, env: env ?? process.env, stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"], shell: false });
@@ -187,7 +183,7 @@ function backgroundHelper() {
   return existsSync(helper) ? helper : null;
 }
 
-async function runCodex(prompt, jobId, image) {
+async function runCodex(prompt, jobId, image, language) {
   const jobDir = path.join(jobsDir, jobId);
   const responseFile = path.join(jobDir, "response.txt");
   await mkdir(jobDir, { recursive: true });
@@ -204,11 +200,9 @@ async function runCodex(prompt, jobId, image) {
     images.push({ name: `${path.parse(file.name).name}.png`, url: `/api/agent/assets/${name}` });
   }
   if (!text && !images.length) throw new Error("Codex returned an empty response");
-  const note = keptBackground ? "\n\nCould not remove the background (no Codex background-removal helper available); the image was published as is." : "";
-  return { text: (text || `Images created: ${images.length}`) + note, images };
-}
-function needsImageHandoff(text) {
-  return /__CODEX_IMAGE_HANDOFF__/.test(text) || /image_gen|generation[^.]{0,40}unavailable|(?:can't|cannot|unable to).{0,40}(?:image|picture)/i.test(text);
+  const strings = replyStrings(language);
+  const note = keptBackground ? `\n\n${strings.backgroundKept}` : "";
+  return { text: (text || strings.imagesCreated(images.length)) + note, images };
 }
 function extractPatch(text) {
   const match = text.match(/```whiteboard-patch\s*([\s\S]*?)```/i);
@@ -227,6 +221,8 @@ async function processQueue() {
     while (queue.length) {
       const job = queue.shift();
       const items = await messages();
+      const language = replyLanguage(job.text, uiLocaleFromConfig(currentConfig()));
+      const strings = replyStrings(language);
       try {
         const prompt = buildChatPrompt({
           roomId: job.roomId,
@@ -238,6 +234,7 @@ async function processQueue() {
             .map(({ role, text }) => ({ role, text })),
           routerRules: diagramRouterRules,
           visualStyle: diagramVisualStyle,
+          language,
         });
         const config = currentConfig();
         const { chat, image } = config.agent;
@@ -245,18 +242,18 @@ async function processQueue() {
         const canImage = imageConfigured(image);
         const wantsImage = isImageRequest(job.text);
         let result;
-        if (wantsImage && canImage) result = await runCodex(prompt, job.id, image);
+        if (wantsImage && canImage) result = await runCodex(prompt, job.id, image, language);
         else {
           result = await runChat(chatPromptWithImagePolicy(prompt, wantsImage), chat, job.id);
           if (!result.images.length && needsImageHandoff(result.text)) {
-            result = canImage ? await runCodex(prompt, job.id, image) : await runChat(chatPromptWithImagePolicy(prompt, true), chat, job.id);
+            result = canImage ? await runCodex(prompt, job.id, image, language) : await runChat(chatPromptWithImagePolicy(prompt, true), chat, job.id);
           }
         }
         items.push({
           id: crypto.randomUUID(),
           roomId: job.roomId,
           role: "assistant",
-          text: result.text.replace(/```whiteboard-patch[\s\S]*?```/gi, "").trim() || "Changes prepared.",
+          text: result.text.replace(/```whiteboard-patch[\s\S]*?```/gi, "").trim() || strings.changesPrepared,
           patch: extractPatch(result.text),
           images: result.images,
           at: new Date().toISOString(),
@@ -267,7 +264,7 @@ async function processQueue() {
           id: crypto.randomUUID(),
           roomId: job.roomId,
           role: "assistant",
-          text: `Agent error: ${redact(error.message, currentConfig().agent.chat)}`,
+          text: strings.agentError(redact(error.message, currentConfig().agent.chat)),
           error: true,
           at: new Date().toISOString(),
           replyTo: job.id,

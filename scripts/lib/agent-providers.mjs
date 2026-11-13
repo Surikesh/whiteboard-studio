@@ -119,14 +119,14 @@ export function chatPromptWithImagePolicy(prompt, wantsImage) {
   return wantsImage ? `${prompt}\n\n${NO_IMAGE_INSTRUCTION}` : prompt;
 }
 
-export function buildChatPrompt({ roomId, text, board, history, routerRules, visualStyle }) {
+export function buildChatPrompt({ roomId, text, board, history, routerRules, visualStyle, language = "en" }) {
   return `You are the embedded assistant for a collaborative Tldraw board.
 Board ID: ${roomId}
 User request: ${text}
 Current board summary (possibly truncated): ${JSON.stringify(board).slice(0, 80_000)}
 Conversation history for this room: ${JSON.stringify(history).slice(0, 30_000)}
 
-Answer in English, briefly. Never remove or replace existing content.
+Answer in ${language === "ru" ? "Russian" : "English"}, briefly. Never remove or replace existing content.
 For diagrams, schemes, architecture, flows, maps, notes, and other editable canvas changes, first infer the explanatory intent and choose the diagram grammar using the routing contract below. The user does not need to know or name the diagram type.
 
 ${routerRules}
