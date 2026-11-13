@@ -17,7 +17,15 @@ export const isLoopbackAddress = (address) => LOOPBACK.test(String(address ?? ""
  * miniflare 4.20260515.0), after the Vite middleware, so node-level code never sees that stamp and must not
  * trust a loopback header value: any header means a guest.
  */
+/**
+ * Set by the agent bridge on every request it judged remote before proxying it to the app over loopback, so
+ * the app's own checks see a LAN guest as a guest too. A client can add it (that only makes it a guest) but
+ * not remove it: the bridge decides from the socket and the tunnel header, not from this value.
+ */
+export const GUEST_HEADER = "x-whiteboard-studio-guest";
+
 export function isRemoteRequest(req) {
+  if (req.headers[GUEST_HEADER] !== undefined) return true;
   const header = req.headers["cf-connecting-ip"];
   const value = Array.isArray(header) ? header.join(",") : header;
   if (value !== undefined && value !== "") {
@@ -46,6 +54,9 @@ export function canonicalPath(rawUrl) {
     .replace(/\/{2,}/g, "/")
     .toLowerCase();
 }
+
+/** The shared board list: guests read an empty list and may not change it. */
+export const isWorkspaceListPath = (canonical) => canonical === "/api/workspace";
 
 /** True for /api/lab and everything under it (board snapshots and revisions: this computer only). */
 export const isLabPath = (canonical) => canonical === "/api/lab" || canonical.startsWith("/api/lab/");

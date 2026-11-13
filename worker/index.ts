@@ -23,8 +23,13 @@ import { isWorkspaceId } from "../app/io/workspace-id.mjs";
 
 export { TldrawDurableObject } from "./TldrawDurableObject";
 
-/** A request from a tunnel or LAN guest. See the snapshot route below for why a loopback value is local. */
+/**
+ * A request from a tunnel or LAN guest. The dev server and the bridge decide this first (scripts/lib/remote-request.mjs,
+ * which also sets x-whiteboard-studio-guest for LAN guests it proxies); this is the worker's own second check.
+ * See the snapshot route below for why a loopback client IP is local here.
+ */
 function isTunnelled(request: Request) {
+  if (request.headers.has("x-whiteboard-studio-guest")) return true;
   const clientIp = request.headers.get("cf-connecting-ip");
   return Boolean(clientIp && !/^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1|localhost)$/.test(clientIp.trim()));
 }

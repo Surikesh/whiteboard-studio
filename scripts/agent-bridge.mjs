@@ -7,7 +7,7 @@ import { existsSync } from "node:fs";
 import httpProxy from "http-proxy";
 import { guestMayReadAsset } from "./lib/board-assets.mjs";
 import { isSpecShape } from "../app/domain/spec/format.mjs";
-import { agentRouteAccess, canonicalPath, isLabPath, isRemoteRequest } from "./lib/remote-request.mjs";
+import { GUEST_HEADER, agentRouteAccess, canonicalPath, isLabPath, isRemoteRequest } from "./lib/remote-request.mjs";
 import { labPaths, loadConfig, ensureDataDirs } from "./lib/lab-config.mjs";
 import { isImageRequest, needsImageHandoff, replyLanguage, replyStrings } from "./lib/agent-language.mjs";
 import { uiLocaleFromConfig } from "../app/domain/locale.mjs";
@@ -283,6 +283,7 @@ const FORBIDDEN = { message: "Forbidden" };
 async function refuse(req, res, url) {
   const canonical = canonicalPath(req.url);
   const remote = isRemoteRequest(req);
+  if (remote) req.headers[GUEST_HEADER] = "1"; // the app behind the proxy sees only loopback (see GUEST_HEADER)
   if (canonical === null) {
     json(res, 400, { message: "Invalid request" });
     return true;
@@ -413,7 +414,9 @@ proxy.on("error", (error, _req, target) => {
 server.on("upgrade", (req, socket, head) => {
   socket.on("error", () => socket.destroy());
   const canonical = canonicalPath(req.url);
-  if (canonical === null || (isRemoteRequest(req) && (isLabPath(canonical) || canonical.startsWith("/api/agent")))) return socket.destroy();
+  const remote = isRemoteRequest(req);
+  if (canonical === null || (remote && (isLabPath(canonical) || canonical.startsWith("/api/agent")))) return socket.destroy();
+  if (remote) req.headers[GUEST_HEADER] = "1";
   proxy.ws(req, socket, head, {}, () => socket.destroy());
 });
 server.listen(port, host, () => console.log(`Agent bridge on http://${host}:${port} -> ${appTarget}`));

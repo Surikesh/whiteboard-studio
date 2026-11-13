@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, unlinkSyn
 import path from "node:path";
 import { ensureDataDirs, labPaths, loadConfig } from "./lib/lab-config.mjs";
 import { guestMayReadAsset } from "./lib/board-assets.mjs";
-import { canonicalPath, isLabPath, isRemoteRequest } from "./lib/remote-request.mjs";
+import { canonicalPath, isLabPath, isRemoteRequest, isWorkspaceListPath } from "./lib/remote-request.mjs";
 import { mergedIndex, resolveDiagramFile } from "./lib/workspace-overlay.mjs";
 import { ASSET_PREFIX, assetContentType, boardFileId, boardFileName, isBoardId, isSafeBasename, revisionFileName, revisionsToPrune, shouldWriteRevision, snapshotToTldr } from "./lib/lab-storage.mjs";
 
@@ -60,8 +60,17 @@ export function labStoragePlugin({ projectDir = process.cwd() } = {}) {
             return res.end("Error");
           }
         }
-        if (!isLab && !isAsset) return next();
-        const remote = isRemoteRequest(req); // any cf-connecting-ip header marks a guest (see remote-request.mjs)
+        const remote = isRemoteRequest(req); // any cf-connecting-ip or guest header marks a guest (see remote-request.mjs)
+        if (remote && isWorkspaceListPath(canonical)) {
+          // The board list (titles, projects, tags) is the owner's; the worker repeats this check for tunnel requests.
+          if (req.method === "GET" || req.method === "HEAD") {
+            res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+            return res.end("[]");
+          }
+          res.statusCode = 403;
+          return res.end("Forbidden");
+        }
+        if (!isLab && !isAsset) return next(); // any cf-connecting-ip header marks a guest (see remote-request.mjs)
         if (isLab && remote) {
           res.statusCode = 403;
           return res.end("Forbidden");
