@@ -66,6 +66,11 @@ function WhiteboardStudioApp({ initialDocumentId }: { initialDocumentId?: string
 
   const filteredDocuments = useFilteredDocuments(documents, query);
 
+  // tldraw's own menus read the locale from user preferences rather than the `locale` prop, so keep them in step with ui.locale.
+  useEffect(() => {
+    if (mountedEditor && mountedEditor.user.getLocale() !== locale) mountedEditor.user.updateUserPreferences({ locale });
+  }, [mountedEditor, locale]);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
