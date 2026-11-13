@@ -32,7 +32,7 @@ npm start       # starts the app and prints its URL
 
 Boards, config and snapshots are stored in `~/WhiteboardStudio-data`. Set `WHITEBOARD_STUDIO_DATA_DIR` to use another folder, for example a throwaway one while trying the app.
 
-Coming from an earlier Tldraw Lab install? With this lab stopped, `npm run lab -- import --from <its data dir> --repo <its checkout>` copies its rooms, `.tldr` exports, revisions, agent assets, chat history, config, board list and diagram specs. The old data is only read, and nothing already in this data directory is replaced unless you pass `--overwrite`, so you can repeat the import later; `--dry-run` shows what would be copied.
+Coming from an earlier Tldraw Lab install? With this lab stopped, `npm run lab -- import --from <its data dir> --repo <its checkout>` copies its rooms, `.tldr` exports, revisions, agent assets, chat history, config, board list and diagram specs. The old data is only read, and nothing already in this data directory is replaced unless you pass `--overwrite` (that includes an existing `config.json`), so you can repeat the import later; `--dry-run` shows what would be copied. The import refuses to run while any process (a lab or `npm start` on any port) has files open in this data directory.
 
 > `npm start` runs the development server on purpose. The production server (`vinext start`) is a plain Node process without the Durable Object binding that the sync and workspace routes need, so `/api/workspace` returns 500 there.
 

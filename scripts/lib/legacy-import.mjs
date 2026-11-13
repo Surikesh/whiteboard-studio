@@ -3,6 +3,7 @@
 // `VACUUM INTO` through a read-only connection, so a running old app keeps working and its WAL is
 // included. Nothing that already exists in the target is replaced unless `overwrite` is set, so the
 // import can be repeated to pick up boards created later.
+import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -68,11 +69,50 @@ function copyTree(source, target, overwrite, dryRun, counts) {
       }
       if (!dryRun) {
         mkdirSync(target, { recursive: true });
-        copyFileSync(from, to);
+        copyFileAtomic(from, to);
       }
       counts.copied += 1;
     }
   }
+}
+
+/** Copy through a sibling temp file, so an interrupted copy never leaves a partial or half-replaced target. */
+function copyFileAtomic(from, to) {
+  const tmp = `${to}.import-${process.pid}.tmp`;
+  try {
+    copyFileSync(from, tmp);
+    renameSync(tmp, to);
+  } finally {
+    rmSync(tmp, { force: true });
+  }
+}
+
+/**
+ * Process ids (other than this one) holding files open under `dir`, via `lsof`. Catches a destination lab started
+ * any way (lab start, npm start on any port). Returns null when lsof is unavailable, so the caller falls back.
+ */
+export function processesUsing(dir) {
+  if (!existsSync(dir)) return [];
+  const run = spawnSync("lsof", ["-t", "+D", dir], { encoding: "utf8" });
+  if (run.error) return null;
+  return [...new Set(run.stdout.split(/\s+/).filter(Boolean).map(Number))].filter((pid) => pid !== process.pid);
+}
+
+/** The old bridge rewrites its chat file in place; take it only when two reads agree and it parses as a list. */
+async function stableMessages(file) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const first = readFileSync(file);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const second = readFileSync(file);
+    if (first.equals(second)) {
+      try {
+        if (Array.isArray(JSON.parse(second.toString("utf8")))) return second;
+      } catch {
+        // mid-write or damaged: read again
+      }
+    }
+  }
+  return null;
 }
 
 const sameFile = (a, b) => existsSync(b) && statSync(a).size === statSync(b).size && readFileSync(a).equals(readFileSync(b));
@@ -200,7 +240,7 @@ export function mergeLegacyConfig(current, legacy) {
 }
 
 /** Plain files: board exports, revisions, agent assets and the chat history. */
-export function importFiles({ fromData, paths, overwrite = false, dryRun = false }) {
+export async function importFiles({ fromData, paths, overwrite = false, dryRun = false }) {
   const report = {};
   for (const [name, target] of [
     ["boards", paths.boards],
@@ -214,8 +254,12 @@ export function importFiles({ fromData, paths, overwrite = false, dryRun = false
   const messages = path.join(fromData, "bridge", "agent-messages.json");
   report.messages = existsSync(messages) && (overwrite || !existsSync(paths.messages)) && !(existsSync(paths.messages) && sameFile(messages, paths.messages));
   if (report.messages && !dryRun) {
-    mkdirSync(path.dirname(paths.messages), { recursive: true });
-    copyFileSync(messages, paths.messages);
+    const data = await stableMessages(messages);
+    if (!data) report.messages = "unreadable";
+    else {
+      mkdirSync(path.dirname(paths.messages), { recursive: true });
+      writeFileAtomic(paths.messages, data);
+    }
   }
   return report;
 }

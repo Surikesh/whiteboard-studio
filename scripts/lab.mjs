@@ -284,16 +284,20 @@ async function importCommand(args) {
   const paths = dryRun ? labPaths() : ensureDataDirs();
   if (path.resolve(fromData) === path.resolve(paths.root)) throw new Error("--from is this lab's own data directory");
   const config = loadConfig(paths);
-  if (!dryRun && ((await portInUse(config.share.port)) || (await portInUse(config.share.bridgePort))))
-    throw new Error(`Something listens on port ${config.share.port} or ${config.share.bridgePort}; stop this lab before importing (its rooms are open)`);
-  const { importRooms, importWorkspace, importFiles, mergeLegacyConfig, uniqueKeyFor } = await import("./lib/legacy-import.mjs");
+  const { importRooms, importWorkspace, importFiles, mergeLegacyConfig, processesUsing, uniqueKeyFor } = await import("./lib/legacy-import.mjs");
+  if (!dryRun) {
+    const users = processesUsing(paths.state);
+    if (users?.length) throw new Error(`Process ${users.join(", ")} has files open in ${paths.state}; stop every lab or dev server using this data directory before importing`);
+    if ((await portInUse(config.share.port)) || (await portInUse(config.share.bridgePort)))
+      throw new Error(`Something listens on port ${config.share.port} or ${config.share.bridgePort}; stop this lab before importing (its rooms are open)`);
+  }
   const workerName = readJson(path.join(projectDir, "package.json")).name;
   const rooms = await importRooms({ fromState: path.join(fromData, "state"), toState: paths.state, newUniqueKey: uniqueKeyFor(workerName), overwrite, dryRun });
-  const files = importFiles({ fromData, paths, overwrite, dryRun });
+  const files = await importFiles({ fromData, paths, overwrite, dryRun });
   const workspace = fromRepo ? importWorkspace({ fromRepo, projectDir, paths, overwrite, dryRun }) : null;
   const legacyConfigFile = path.join(fromData, "config.json");
   let configImported = false;
-  if (existsSync(legacyConfigFile) && (overwrite || !existsSync(paths.config) || readFileSync(paths.config, "utf8") === `${JSON.stringify(defaultConfig, null, 2)}\n`)) {
+  if (existsSync(legacyConfigFile) && (overwrite || !existsSync(paths.config))) {
     if (!dryRun) saveConfig(mergeLegacyConfig(config, readJson(legacyConfigFile)), paths);
     configImported = true;
   }
@@ -302,7 +306,7 @@ async function importCommand(args) {
   console.log(`rooms: ${prefix} ${rooms.copied.length}, already there ${rooms.skipped.length}${rooms.unnamed.length ? `, without a stored name (left alone) ${rooms.unnamed.length}` : ""}`);
   if (rooms.mismatched.length) console.log(`  note: ${rooms.mismatched.length} room file(s) had an id that does not match their stored name; imported by name`);
   for (const [name, counts] of Object.entries(files)) if (typeof counts === "object") console.log(`${name}: ${prefix} ${counts.copied} file(s), already there ${counts.skipped}`);
-  console.log(`chat history: ${files.messages ? prefix : "kept"}`);
+  console.log(`chat history: ${files.messages === "unreadable" ? "not copied: the old file kept changing or is not valid JSON; run the import again" : files.messages ? prefix : "kept"}`);
   console.log(
     `config: ${configImported ? `${prefix} (agent, storage and Cloudflare settings; ports stay ${config.share.port}/${config.share.bridgePort})` : "kept (pass --overwrite to merge the old one in)"}`,
   );

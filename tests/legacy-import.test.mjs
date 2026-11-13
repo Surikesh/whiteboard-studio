@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { defaultConfig, labPaths } from "../scripts/lib/lab-config.mjs";
-import { durableObjectId, importFiles, importRooms, importWorkspace, mergeLegacyConfig, uniqueKeyFor } from "../scripts/lib/legacy-import.mjs";
+import { durableObjectId, importFiles, importRooms, importWorkspace, mergeLegacyConfig, processesUsing, uniqueKeyFor } from "../scripts/lib/legacy-import.mjs";
 import { readUserIndex } from "../scripts/lib/workspace-overlay.mjs";
 
 const projectDir = path.resolve(import.meta.dirname, "..");
@@ -95,7 +96,7 @@ test("board list and specs go to the user's data; demo ids and names stay demos;
   assert.equal(readUserIndex(paths).length, 1);
 });
 
-test("files are copied without replacing existing ones; config keeps the new ports", () => {
+test("files are copied without replacing existing ones; config keeps the new ports", async () => {
   const from = tmp("legacy-data-");
   const paths = labPaths(tmp("new-data-"));
   mkdirSync(path.join(from, "boards"), { recursive: true });
@@ -104,10 +105,11 @@ test("files are copied without replacing existing ones; config keeps the new por
   writeFileSync(path.join(from, "revisions", "td_a", "1.tldr"), "rev");
   mkdirSync(paths.boards, { recursive: true });
   writeFileSync(path.join(paths.boards, "td_a.tldr"), "new");
-  const report = importFiles({ fromData: from, paths });
+  const report = await importFiles({ fromData: from, paths });
   assert.deepEqual(report.boards, { copied: 0, skipped: 1 });
   assert.deepEqual(report.revisions, { copied: 1, skipped: 0 });
   assert.equal(readFileSync(path.join(paths.boards, "td_a.tldr"), "utf8"), "new");
+  assert.deepEqual(readdirSync(path.join(paths.revisions, "td_a")), ["1.tldr"]); // no temp files left behind
 
   const merged = mergeLegacyConfig(defaultConfig, {
     agent: { chat: { provider: "codex", model: "m" } },
@@ -121,4 +123,46 @@ test("files are copied without replacing existing ones; config keeps the new por
   assert.equal(merged.share.cloudflarePublicUrl, "https://example.test");
   assert.equal(merged.storage.maxRevisionsPerBoard, 10);
   assert.equal(merged.storage.exportDelaySeconds, defaultConfig.storage.exportDelaySeconds);
+});
+
+test("chat history that is not a valid list is not imported, so a later run can still pick it up", async () => {
+  const from = tmp("legacy-data-");
+  const paths = labPaths(tmp("new-data-"));
+  mkdirSync(path.join(from, "bridge"), { recursive: true });
+  writeFileSync(path.join(from, "bridge", "agent-messages.json"), '[{"id":"m1"'); // caught mid-write
+  assert.equal((await importFiles({ fromData: from, paths })).messages, "unreadable");
+  assert.equal(existsSync(paths.messages), false);
+  writeFileSync(path.join(from, "bridge", "agent-messages.json"), '[{"id":"m1"}]');
+  assert.equal((await importFiles({ fromData: from, paths })).messages, true);
+  assert.deepEqual(JSON.parse(readFileSync(paths.messages, "utf8")), [{ id: "m1" }]);
+});
+
+test("a process holding files open in the target data directory is found, whatever port it uses", { skip: spawnSync("lsof", ["-v"]).error ? "no lsof" : false }, async (t) => {
+  const dir = tmp("held-state-");
+  const file = path.join(dir, "room.sqlite");
+  writeFileSync(file, "");
+  assert.deepEqual(processesUsing(dir), []);
+  const holder = spawn(process.execPath, ["-e", `require("fs").openSync(${JSON.stringify(file)}, "r"); console.log("open"); setInterval(() => {}, 1000)`], { stdio: ["ignore", "pipe", "ignore"] });
+  t.after(() => holder.kill());
+  await new Promise((resolve) => holder.stdout.once("data", resolve));
+  assert.deepEqual(processesUsing(dir), [holder.pid]);
+});
+
+test("lab import keeps an existing config, even the default one, unless --overwrite is given", () => {
+  const from = tmp("legacy-data-");
+  const data = tmp("new-data-");
+  mkdirSync(path.join(from, "state"), { recursive: true });
+  writeFileSync(path.join(from, "config.json"), JSON.stringify({ share: { mode: "cloudflare" }, agent: { chat: { provider: "codex" } } }));
+  const lab = (...args) => spawnSync(process.execPath, [path.join(projectDir, "scripts/lab.mjs"), ...args], { env: { ...process.env, WHITEBOARD_STUDIO_DATA_DIR: data }, encoding: "utf8" });
+  assert.equal(lab("init").status, 0);
+  // Ports nobody uses, so a real lab on the default ports does not make the import refuse.
+  const config = JSON.parse(readFileSync(path.join(data, "config.json"), "utf8"));
+  Object.assign(config.share, { port: 1, bridgePort: 2 });
+  writeFileSync(path.join(data, "config.json"), `${JSON.stringify(config, null, 2)}\n`);
+  const before = readFileSync(path.join(data, "config.json"), "utf8");
+  const run = lab("import", "--from", from);
+  assert.equal(run.status, 0, run.stderr);
+  assert.equal(readFileSync(path.join(data, "config.json"), "utf8"), before);
+  assert.equal(lab("import", "--from", from, "--overwrite").status, 0);
+  assert.equal(JSON.parse(readFileSync(path.join(data, "config.json"), "utf8")).share.mode, "cloudflare");
 });
