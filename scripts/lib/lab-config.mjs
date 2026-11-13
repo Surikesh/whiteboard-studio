@@ -31,6 +31,11 @@ export function labPaths(root = dataDir()) {
     jobs: path.join(bridge, "jobs"),
     // Runtime on/off switch for the agent chat (presence = enabled).
     agentEnabled: path.join(bridge, "agent-enabled"),
+    // Share-link supervisor: intent switch (presence = on), restart request and the published state.
+    share: path.join(root, "share"),
+    shareIntent: path.join(root, "share", "enabled"),
+    shareRestart: path.join(root, "share", "restart-requested"),
+    shareState: path.join(root, "share", "state.json"),
   };
 }
 
@@ -85,7 +90,7 @@ export function saveConfig(config, paths = labPaths()) {
 }
 
 export function ensureDataDirs(paths = labPaths()) {
-  for (const dir of [paths.root, paths.state, paths.boards, paths.revisions, paths.assets, paths.bridge, paths.jobs]) {
+  for (const dir of [paths.root, paths.state, paths.boards, paths.revisions, paths.assets, paths.bridge, paths.jobs, paths.share]) {
     mkdirSync(dir, { recursive: true });
   }
   return paths;

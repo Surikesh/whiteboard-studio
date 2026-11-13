@@ -12,38 +12,9 @@ extension AppDelegate {
     }
   }
 
-  // MARK: Shared link health
-
-  /// One-shot timer; a pending wake-up check is not replaced by the regular cadence.
-  func scheduleHealthCheck(after delay: TimeInterval, force: Bool = false) {
-    guard !isTerminating, force || !healthPending else { return }
-    healthGeneration += 1
-    let generation = healthGeneration
-    healthPending = true
-    Task { [weak self] in
-      try? await Task.sleep(for: .seconds(delay))
-      guard let self, generation == self.healthGeneration else { return }
-      self.healthPending = false
-      await self.runHealthCycle()
-    }
-  }
-
-  private func runHealthCycle() async {
-    guard !isCheckingHealth else { return }
-    isCheckingHealth = true
-    if server.mode == .shared {
-      await server.checkHealth()
-      if server.health == .down { await server.recoverIfNeeded() }
-    }
-    isCheckingHealth = false
-    // Re-check quickly while the link is not known to be good.
-    let settled = server.mode != .shared || server.health == .ok
-    scheduleHealthCheck(after: settled ? 30 : 10)
-  }
-
+  /// After sleep the supervisor re-checks the link itself (with its grace period); just refresh the view.
   func systemDidWake() {
-    server.markStale()
-    scheduleHealthCheck(after: 15, force: true)
+    pollServer()
   }
 
   /// The quick tunnel got a new address: move tabs off the old one and tell the user.
@@ -107,7 +78,8 @@ extension AppDelegate {
       agentEnabled: server.agentEnabled,
       agentBusy: server.agentBusy,
       agentModel: server.agentModel,
-      task: nil,
+      task: server.task,
+      status: Self.shareStatusText(server),
       health: server.health,
       recoveryGaveUp: server.recoveryGaveUp
     ))

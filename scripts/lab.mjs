@@ -4,9 +4,11 @@
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, accessSync, constants } from "node:fs";
 import http from "node:http";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { projectDir, labPaths, loadConfig, saveConfig, defaultConfig, ensureDataDirs } from "./lib/lab-config.mjs";
+import { readShareState, startShareSupervisor, supervisorAlive } from "./lib/share-supervisor.mjs";
 import { maskConfig, chatModel, imageModel, chatConfigured, imageConfigured } from "./lib/agent-providers.mjs";
 
 const isWin = process.platform === "win32";
@@ -17,6 +19,8 @@ function usage() {
 
   init                  create the data directory and a default config.json
   start                 start the app, the agent bridge and (optionally) a tunnel
+  share on|off|restart|status [--wait SECONDS]
+                        switch the Cloudflare link of the running lab; --wait blocks until it works
   agent on|off|status   toggle the agent chat at runtime
   config                show config path and config (secrets masked)
   doctor                check Node and optional tools`);
@@ -52,6 +56,57 @@ function agentCommand(action) {
     `chat: ${chat.provider}${chat.provider !== "none" ? ` (${chatModel(chat) || "default model"}, ${chatConfigured(chat) ? "configured" : "NOT configured: set baseUrl and model"})` : " (agent chat unavailable)"}`,
   );
   console.log(`image: ${image.provider}${imageConfigured(image) ? ` (${imageModel(image)})` : " (image generation unavailable)"}`);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function describeShare(state) {
+  if (!state) return "status: not running (start the lab with `npm run lab -- start`)";
+  const lines = [`status: ${state.status}${state.linkReady ? "" : state.status === "off" ? "" : " (link not ready yet)"}`];
+  if (state.linkReady && state.url) lines.push(`url: ${state.url}`);
+  if (state.lastError && !state.linkReady && state.status !== "off") lines.push(`last error: ${state.lastError}`);
+  if (state.nextRestartAt && state.status === "restarting") lines.push(`next restart: ${new Date(state.nextRestartAt).toLocaleTimeString()}`);
+  if (state.status === "gave-up") lines.push("automatic restarts paused; `lab share restart` tries again");
+  return lines.join("\n");
+}
+
+async function shareCommand(action, args) {
+  const paths = ensureDataDirs();
+  const waitAt = args.indexOf("--wait");
+  const waitSeconds = waitAt >= 0 ? Number(args[waitAt + 1] ?? 120) : 0;
+  const asJson = args.includes("--json");
+  if (!["on", "off", "restart", "status", undefined].includes(action)) {
+    console.error("Usage: lab share on|off|restart|status [--wait SECONDS] [--json]");
+    process.exit(2);
+  }
+  let state = readShareState(paths);
+  const alive = supervisorAlive(state);
+  if (action && action !== "status") {
+    if (!alive) throw new Error("Whiteboard Studio is not running. Start it with `npm run lab -- start` first.");
+    if (action === "on" && !version("cloudflared"))
+      throw new Error("`cloudflared` was not found in PATH. Install it: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/");
+    if (action === "on") writeFileSync(paths.shareIntent, "");
+    if (action === "off") {
+      rmSync(paths.shareIntent, { force: true });
+      rmSync(paths.agentEnabled, { force: true }); // the agent is only for shared sessions
+    }
+    if (action === "restart") writeFileSync(paths.shareRestart, String(Date.now()));
+  }
+  const want = action === "off" ? (s) => s?.status === "off" : action === "on" || action === "restart" ? (s) => s?.linkReady : null;
+  const deadline = Date.now() + waitSeconds * 1000;
+  // Give the supervisor (2 s tick) a moment to pick up a switch before reporting.
+  const settleUntil = Date.now() + (action && action !== "status" ? 3_000 : 0);
+  for (;;) {
+    state = readShareState(paths);
+    const t = Date.now();
+    if (t >= settleUntil && (!want || !waitSeconds || want(state) || t >= deadline)) break;
+    await sleep(500);
+  }
+  if (!alive) state = null;
+  console.log(asJson ? JSON.stringify(state) : describeShare(state));
+  if (want && waitSeconds > 0 && !want(state)) process.exitCode = 1;
 }
 
 function configCommand() {
@@ -101,6 +156,7 @@ function doctor() {
 
 const children = [];
 let shuttingDown = false;
+let supervisor = null;
 
 function killTree(child) {
   if (child.exitCode !== null || child.signalCode) return;
@@ -120,6 +176,7 @@ function shutdown(code = 0) {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log("\nStopping Whiteboard Studio...");
+  const supervisorStopped = supervisor?.stop() ?? Promise.resolve();
   for (const child of children) killTree(child);
   setTimeout(() => {
     for (const child of children)
@@ -133,7 +190,7 @@ function shutdown(code = 0) {
       }
     process.exit(code);
   }, 2500).unref();
-  Promise.all(children.map((c) => new Promise((r) => (c.exitCode !== null ? r() : c.once("exit", r))))).then(() => process.exit(code));
+  Promise.all([supervisorStopped, ...children.map((c) => new Promise((r) => (c.exitCode !== null ? r() : c.once("exit", r))))]).then(() => process.exit(code));
 }
 
 function launch(name, cmd, args, options = {}) {
@@ -183,6 +240,15 @@ function waitForHttp(url, timeoutMs) {
   });
 }
 
+function portInUse(port) {
+  return new Promise((resolve) => {
+    const socket = net.connect({ port, host: "127.0.0.1" });
+    socket.once("connect", () => (socket.destroy(), resolve(true)));
+    socket.once("error", () => resolve(false));
+    socket.setTimeout(1500, () => (socket.destroy(), resolve(false)));
+  });
+}
+
 function lanAddresses() {
   return Object.values(os.networkInterfaces())
     .flat()
@@ -198,7 +264,7 @@ function localBin(name) {
 async function start() {
   const paths = ensureDataDirs();
   const config = loadConfig(paths);
-  const { mode, port, bridgePort, cloudflareTunnelToken, cloudflarePublicUrl } = config.share;
+  const { mode, port, bridgePort } = config.share;
   if (!["local", "lan", "cloudflare"].includes(mode)) throw new Error(`Unknown share.mode "${mode}" (local | lan | cloudflare)`);
   if (mode === "cloudflare" && !version("cloudflared")) {
     throw new Error("share.mode is cloudflare but `cloudflared` was not found in PATH. Install it: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/");
@@ -206,7 +272,13 @@ async function start() {
   const vinext = process.env.WHITEBOARD_STUDIO_VINEXT_BIN || localBin("vinext");
   if (!vinext) throw new Error("vinext not found in node_modules/.bin. Run `npm install` first.");
 
+  if (supervisorAlive(readShareState(paths))) throw new Error("Whiteboard Studio is already running (see `npm run lab -- share status`).");
+  for (const p of [port, bridgePort]) if (await portInUse(p)) throw new Error(`Port ${p} is already in use (another Whiteboard Studio, or change share.port / share.bridgePort in ${paths.config}).`);
   rmSync(paths.agentEnabled, { force: true }); // agent access is OFF on every launch
+  rmSync(paths.shareRestart, { force: true });
+  // The link is on at launch only when the config asks for it; otherwise `lab share on` (or the app) turns it on.
+  if (mode === "cloudflare") writeFileSync(paths.shareIntent, "");
+  else rmSync(paths.shareIntent, { force: true });
   mkdirSync(path.join(projectDir, ".wrangler"), { recursive: true });
   // The app always stays on loopback; in LAN mode only the bridge (the single entry point) is exposed.
   const bind = mode === "lan" ? "0.0.0.0" : "127.0.0.1";
@@ -225,27 +297,13 @@ async function start() {
   pipeLogs(bridge, "bridge");
   await waitForHttp(`http://127.0.0.1:${bridgePort}/api/agent/status`, 30_000);
 
-  let publicUrl = null;
-  if (mode === "cloudflare") {
-    const origin = `http://127.0.0.1:${bridgePort}`;
-    const args = cloudflareTunnelToken ? ["tunnel", "--no-autoupdate", "run", "--token", cloudflareTunnelToken] : ["tunnel", "--url", origin, "--no-autoupdate"];
-    const tunnel = launch("cloudflared", "cloudflared", args, { shell: isWin });
-    const found = new Promise((resolve) => {
-      pipeLogs(tunnel, "cloudflared", (line) => {
-        const match = line.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/i);
-        if (match) resolve(match[0]);
-        if (cloudflareTunnelToken && /Registered tunnel connection/i.test(line)) resolve(cloudflarePublicUrl || null);
-      });
-    });
-    publicUrl = await Promise.race([found, new Promise((r) => setTimeout(() => r(undefined), 60_000))]);
-    if (publicUrl === undefined) console.warn("cloudflared did not report a URL within 60 s; check WHITEBOARD_STUDIO_VERBOSE=1 output.");
-    if (cloudflareTunnelToken && cloudflarePublicUrl) publicUrl = cloudflarePublicUrl;
-  }
+  // cloudflared is owned by the supervisor: when it dies the link is restarted, the lab keeps running.
+  supervisor = startShareSupervisor({ paths, config, origin: `http://127.0.0.1:${bridgePort}`, log: (line) => console.log(line) });
 
   console.log("\nWhiteboard Studio is running. Open:");
   console.log(`  Local:  http://127.0.0.1:${bridgePort}/`);
   if (mode === "lan") for (const ip of lanAddresses()) console.log(`  LAN:    http://${ip}:${bridgePort}/`);
-  if (publicUrl) console.log(`  Public: ${publicUrl}`);
+  console.log(`  Public: ${mode === "cloudflare" ? "starting, see the `share: ... -> ready` line" : "off; `npm run lab -- share on` turns it on"}`);
   console.log(`\nAgent chat is OFF. Enable it with: node scripts/lab.mjs agent on   (data: ${paths.root})`);
   console.log("Press Ctrl+C to stop.");
 }
@@ -253,6 +311,7 @@ async function start() {
 process.on("SIGINT", () => shutdown(0));
 process.on("SIGTERM", () => shutdown(0));
 process.on("exit", () => {
+  supervisor?.killNow();
   for (const child of children) killTree(child);
 });
 
@@ -263,6 +322,9 @@ try {
       break;
     case "start":
       await start();
+      break;
+    case "share":
+      await shareCommand(rest[0], rest.slice(1));
       break;
     case "agent":
       agentCommand(rest[0]);

@@ -1,39 +1,40 @@
 import Foundation
 
-/// Tracks which server mode is running. Ports and the mode come from the lab config (`LabConfig`).
-/// - local: the dev server on `share.port`.
-/// - shared: `share.mode` is `cloudflare` and the bridge answers; the lab is started outside the app
-///   (`npm run lab -- start`) and the app only observes it.
-/// The modes share one Durable Object SQLite state and never run together.
+/// Mirrors the lab started by `node scripts/lab.mjs start` (app + bridge, and the share supervisor that
+/// owns cloudflared). The app never probes or restarts the tunnel itself: it reads the supervisor's
+/// `<data dir>/share/state.json` and switches the link with `lab share on|off|restart`, so there is one
+/// owner of the backoff and of the link state.
+/// - local: the link is off; tabs use the dev server on `share.port`.
+/// - shared: the link is on; tabs use the bridge on `share.bridgePort`, the public entry point.
 @MainActor
 final class LabServer {
   enum Mode { case local, shared }
-  /// Reachability of the shared link; only meaningful in `.shared`.
+  /// Reachability of the shared link as reported by the supervisor; only meaningful in `.shared`.
   enum Health { case unknown, ok, degraded, down }
 
-  /// True while this app session believes sharing is on. A dead bridge is a health failure, never a mode switch.
   private(set) var sharingIntent = false
   var mode: Mode { sharingIntent ? .shared : .local }
+  /// The public origin; set only while the supervisor reports a working link.
   private(set) var publicURL: URL?
+  private(set) var health: Health = .unknown
+  private(set) var recoveryGaveUp = false
+  /// Supervisor status (`starting`, `checking`, `ready`, `degraded`, `restarting`, `gave-up`) for tooltips.
+  private(set) var shareStatus = "off"
+  private(set) var shareError: String?
   private(set) var agentEnabled = false
   private(set) var agentBusy = false
   private(set) var agentModel: String?
+  /// A user-started operation in progress (shown next to the buttons).
+  private(set) var task: String?
   private var localStartedAt: Date?
   private var localProcess: Process?
-
-  private(set) var health: Health = .unknown
-  private var consecutiveFailures = 0
-  private var consecutiveSuccesses = 0
-  private var lastLocalProbeFailed = false
-  private var recoveryRuns: [Date] = []
-  private var incidentAttempts = 0
-  private var nextRecoveryAt = Date.distantPast
-  private var recoveryExhausted = false
-  private var userInitiated = false
-  /// Bumped when a script starts or ends and on wake; results of probes started earlier are dropped.
-  private var operationGeneration = 0
-  private var recoverNotBefore = Date.distantPast
   private var lastPublicHost: String?
+  private var userInitiated = false
+  /// The user turned sharing on in this app session and has not turned it off.
+  private var wantsSharing = false
+  /// Lab process that had sharing on; a different one with sharing off means the lab was restarted.
+  private var sharingLabPid: Int32?
+  private var restoringShare = false
   /// Hosts of tunnels that were replaced while the app kept running.
   private(set) var oldTunnelHosts: Set<String> = []
 
@@ -43,29 +44,51 @@ final class LabServer {
 
   /// Origin for local tabs in the current mode.
   var localOrigin: URL { mode == .shared ? LabConfig.sharedOrigin : LabConfig.homeURL }
-
   var homeURL: URL { localOrigin }
 
-  private static let sharingUnavailable = "Sharing and agent switching from the app are not available; use `npm run lab -- start` and `npm run lab -- agent on|off`."
+  private struct Snapshot: Equatable {
+    let publicURL: URL?, agentEnabled: Bool, agentBusy: Bool, agentModel: String?
+    let health: Health, recoveryGaveUp: Bool, shareStatus: String, task: String?
+  }
+  private var snapshot: Snapshot {
+    Snapshot(
+      publicURL: publicURL, agentEnabled: agentEnabled, agentBusy: agentBusy, agentModel: agentModel,
+      health: health, recoveryGaveUp: recoveryGaveUp, shareStatus: shareStatus, task: task)
+  }
+
+  private struct ShareState: Decodable {
+    let status: String
+    let linkReady: Bool
+    let url: String?
+    let lastError: String?
+    let pid: Int32?
+    let heartbeatAt: String?
+  }
+
+  /// The supervisor's state, or nil when no lab is running (missing file, dead process or stale heartbeat).
+  private func readShareState() -> ShareState? {
+    guard let data = try? Data(contentsOf: LabConfig.shareStateFile),
+      let state = try? JSONDecoder().decode(ShareState.self, from: data),
+      let pid = state.pid, kill(pid, 0) == 0 || errno == EPERM
+    else { return nil }
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    guard let beat = state.heartbeatAt.flatMap(formatter.date(from:)), Date().timeIntervalSince(beat) < 60 else { return nil }
+    return state
+  }
 
   /// Returns true when the mode changed.
   @discardableResult
   func refresh() async -> Bool {
     let previous = mode
-    let generation = operationGeneration
-    let before = (publicURL, agentEnabled, agentBusy, agentModel)
-    let healthBefore = health
+    let before = snapshot
     var request = URLRequest(url: LabConfig.sharedOrigin.appendingPathComponent("api/agent/status"))
     request.timeoutInterval = 1.5
     request.cachePolicy = .reloadIgnoringLocalCacheData
     let result = try? await URLSession.shared.data(for: request)
-    guard generation == operationGeneration else { return false }
-    let url = readPublicURL()
-    if let (data, response) = result,
-      (response as? HTTPURLResponse)?.statusCode == 200,
+    if let (data, response) = result, (response as? HTTPURLResponse)?.statusCode == 200,
       let status = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
     {
-      sharingIntent = LabConfig.cloudflareEnabled
       agentEnabled = status["enabled"] as? Bool ?? false
       agentBusy = status["busy"] as? Bool ?? false
       agentModel = status["model"] as? String
@@ -74,143 +97,76 @@ final class LabServer {
       agentBusy = false
       agentModel = nil
     }
-    if result == nil { sharingIntent = false }
-    if sharingIntent {
-      publicURL = url
+
+    let share = result == nil ? nil : readShareState()
+    restoreSharingIfNeeded(share)
+    shareStatus = share?.status ?? "off"
+    shareError = share?.lastError
+    sharingIntent = shareStatus != "off"
+    if sharingIntent, let share {
+      publicURL = share.linkReady ? share.url.flatMap(URL.init(string:)) : nil
+      recoveryGaveUp = share.status == "gave-up"
+      switch share.status {
+      case "ready": health = .ok
+      case "gave-up": health = .down
+      case "degraded", "restarting": health = .degraded
+      default: health = .unknown
+      }
     } else {
       publicURL = nil
-      resetHealth()
+      health = .unknown
+      recoveryGaveUp = false
       lastPublicHost = nil
     }
+
     var changedTunnel: URL?
-    if sharingIntent, let url, let host = url.host {
+    if let url = publicURL, let host = url.host {
       if let old = lastPublicHost, old != host {
         oldTunnelHosts.insert(old)
         changedTunnel = url
       }
       lastPublicHost = host
     }
-    if previous != mode || healthBefore != health || before != (publicURL, agentEnabled, agentBusy, agentModel) { onChange?() }
+    if previous != mode || before != snapshot { onChange?() }
     if let changedTunnel { onTunnelChange?(changedTunnel, userInitiated) }
     return previous != mode
   }
 
-  // MARK: Health
-
-  private func resetHealth() {
-    health = .unknown
-    consecutiveFailures = 0
-    consecutiveSuccesses = 0
-    lastLocalProbeFailed = false
-    incidentAttempts = 0
-    recoveryExhausted = false
-  }
-
-  /// A manual action (cloud button, start sharing) lets automatic recovery try again.
-  func resetRecovery() {
-    recoveryRuns = []
-    incidentAttempts = 0
-    nextRecoveryAt = .distantPast
-    recoveryExhausted = false
-  }
-
-  /// After sleep the previous result is stale until the next check.
-  func markStale() {
-    guard sharingIntent else { return }
-    operationGeneration &+= 1
-    recoverNotBefore = Date().addingTimeInterval(15)
-    consecutiveSuccesses = 0
-    guard health != .down else { return }
-    health = .degraded
-    onChange?()
-  }
-
-  /// Probes the local app through the bridge and the public tunnel URL.
-  func checkHealth() async {
-    guard sharingIntent else { return }
-    let generation = operationGeneration
-    let session = URLSession(configuration: .ephemeral)
-    defer { session.finishTasksAndInvalidate() }
-
-    let localOK = await probe(LabConfig.sharedOrigin, timeout: 3, session: session)
-    var ok = localOK
-    if localOK {
-      if let origin = publicURL {
-        var components = URLComponents(url: origin, resolvingAgainstBaseURL: false)
-        components?.path = "/"
-        components?.queryItems = [URLQueryItem(name: "health", value: UUID().uuidString)]
-        if let url = components?.url { ok = await probe(url, timeout: 8, session: session) } else { ok = false }
-      } else {
-        ok = false
-      }
+  /// Brings the link back after the whole lab died and came back (it always starts with sharing off).
+  /// Sharing switched off from outside (`lab share off` on the same lab process) is respected.
+  private func restoreSharingIfNeeded(_ share: ShareState?) {
+    guard wantsSharing, task == nil, !restoringShare else { return }
+    guard let share else {
+      ensureLocalServer()
+      return
     }
-    guard generation == operationGeneration else { return }
-
-    let before = health
-    lastLocalProbeFailed = !localOK
-    if ok {
-      consecutiveFailures = 0
-      consecutiveSuccesses += 1
-      if health == .unknown || consecutiveSuccesses >= 2 {
-        health = .ok
-        incidentAttempts = 0
-        recoveryExhausted = false
-      }
-    } else {
-      consecutiveSuccesses = 0
-      consecutiveFailures += 1
-      health = consecutiveFailures >= 3 ? .down : .degraded
+    if share.status != "off" {
+      sharingLabPid = share.pid
+      return
     }
-    if health != before { onChange?() }
-  }
-
-  private func probe(_ url: URL, timeout: TimeInterval, session: URLSession) async -> Bool {
-    var request = URLRequest(url: url)
-    request.timeoutInterval = timeout
-    request.cachePolicy = .reloadIgnoringLocalCacheData
-    guard let (_, response) = try? await session.data(for: request) else { return false }
-    return (response as? HTTPURLResponse)?.statusCode == 200
-  }
-
-  /// Runs one recovery script when the link is down and the budget allows (3 runs per 15 min, backoff 30/60/120 s).
-  /// Returns true when a script ran.
-  @discardableResult
-  func recoverIfNeeded() async -> Bool {
-    guard sharingIntent, health == .down, !recoveryExhausted else { return false }
-    let now = Date()
-    guard now >= recoverNotBefore else { return false }
-    recoveryRuns.removeAll { now.timeIntervalSince($0) > 15 * 60 }
-    if recoveryRuns.count >= 3 {
-      recoveryExhausted = true
-      onChange?()
-      return false
+    guard share.pid != sharingLabPid else {
+      wantsSharing = false
+      return
     }
-    guard now >= nextRecoveryAt else { return false }
-
-    recoveryRuns.append(now)
-    incidentAttempts += 1
-    nextRecoveryAt = Date().addingTimeInterval([30, 60, 120][min(incidentAttempts - 1, 2)])
-    consecutiveSuccesses = 0
-    await refresh()
-    if recoveryRuns.count >= 3 && health == .down { onChange?() }
-    return true
+    restoringShare = true
+    sharingLabPid = share.pid
+    Task {
+      _ = await lab(["share", "on"])
+      restoringShare = false
+    }
   }
 
-  /// True after the budget ran out; the link stays down until a manual action.
-  var recoveryGaveUp: Bool { recoveryExhausted || (health == .down && recoveryRuns.count >= 3) }
-
-  /// Public URL of a named tunnel from the config (origin only).
+  /// Public origin of the current link, also while it is being checked (for recognising our own tunnel URLs).
   func readPublicURL() -> URL? {
-    guard let host = LabConfig.configuredPublicURL?.host else { return nil }
+    guard let url = readShareState()?.url, let host = URL(string: url)?.host else { return nil }
     return URL(string: "https://\(host)/")
   }
 
   // MARK: Actions
 
-  /// Starts the lab (`node scripts/lab.mjs start`: app + bridge, agent access off) when nothing answers in local mode.
-  /// Ports and the data directory come from the lab config; nothing is shared and the agent is never enabled here.
+  /// Starts the lab (`node scripts/lab.mjs start`: app + bridge + share supervisor, agent access off) when nothing answers.
   func ensureLocalServer() {
-    guard mode == .local, LabConfig.shareMode == "local", localProcess?.isRunning != true else { return }
+    guard localProcess?.isRunning != true else { return }
     if let localStartedAt, Date().timeIntervalSince(localStartedAt) < 60 { return }
     guard !LabConfig.projectDir.isEmpty, let node = LabConfig.nodePath else { return }
     let script = LabConfig.projectDir + "/scripts/lab.mjs"
@@ -222,14 +178,80 @@ final class LabServer {
     process.environment = LabConfig.childEnvironment(node: node)
     process.currentDirectoryURL = URL(fileURLWithPath: LabConfig.projectDir)
     process.standardInput = FileHandle.nullDevice
-    process.standardOutput = FileHandle.nullDevice
-    process.standardError = FileHandle.nullDevice
+    let log = LabConfig.labLogHandle()
+    process.standardOutput = log ?? FileHandle.nullDevice
+    process.standardError = log ?? FileHandle.nullDevice
     do { try process.run(); localProcess = process } catch { localProcess = nil }
   }
 
-  func startSharing(boardPath: String) async -> (ok: Bool, output: String) { (false, Self.sharingUnavailable) }
+  /// Waits until the lab's supervisor publishes its state (the lab is up), starting the lab if needed.
+  private func waitForLab(timeout: TimeInterval) async -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    while Date() < deadline {
+      if readShareState() != nil { return true }
+      ensureLocalServer()
+      try? await Task.sleep(for: .seconds(1))
+    }
+    return false
+  }
 
-  func stopSharing() async -> (ok: Bool, output: String) { (false, Self.sharingUnavailable) }
+  /// Runs `node scripts/lab.mjs <arguments>` and returns its exit status and output.
+  private func lab(_ arguments: [String]) async -> (ok: Bool, output: String) {
+    guard !LabConfig.projectDir.isEmpty, let node = LabConfig.nodePath else {
+      return (false, "Node.js or the project directory was not found (set the ProjectDir default).")
+    }
+    let script = LabConfig.projectDir + "/scripts/lab.mjs"
+    return await withCheckedContinuation { continuation in
+      let process = Process()
+      process.executableURL = URL(fileURLWithPath: node)
+      process.arguments = [script] + arguments
+      process.environment = LabConfig.childEnvironment(node: node)
+      process.currentDirectoryURL = URL(fileURLWithPath: LabConfig.projectDir)
+      process.standardInput = FileHandle.nullDevice
+      let pipe = Pipe()
+      process.standardOutput = pipe
+      process.standardError = pipe
+      process.terminationHandler = { finished in
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        continuation.resume(returning: (finished.terminationStatus == 0, String(decoding: data, as: UTF8.self)))
+      }
+      do { try process.run() } catch { continuation.resume(returning: (false, error.localizedDescription)) }
+    }
+  }
 
-  func setAgent(enabled: Bool) async -> (ok: Bool, output: String) { (false, Self.sharingUnavailable) }
+  private func run(_ label: String, _ body: () async -> (ok: Bool, output: String)) async -> (ok: Bool, output: String) {
+    task = label
+    userInitiated = true
+    onChange?()
+    let result = await body()
+    await refresh()
+    task = nil
+    userInitiated = false
+    onChange?()
+    return result
+  }
+
+  /// Turns the link on and waits until it works (cloudflared connected, public URL answers, local DNS knows it).
+  func startSharing() async -> (ok: Bool, output: String) {
+    await run("Starting the link…") {
+      guard await waitForLab(timeout: 180) else { return (false, "Whiteboard Studio did not start within 3 minutes.") }
+      wantsSharing = true
+      sharingLabPid = readShareState()?.pid
+      return await lab(["share", "on", "--wait", "150"])
+    }
+  }
+
+  func stopSharing() async -> (ok: Bool, output: String) {
+    wantsSharing = false
+    return await run("Stopping the link…") { await lab(["share", "off", "--wait", "20"]) }
+  }
+
+  /// Asks the supervisor for a new link; it still waits for the current backoff step.
+  func restartLink() async -> (ok: Bool, output: String) {
+    await run("Restarting the link…") { await lab(["share", "restart", "--wait", "300"]) }
+  }
+
+  func setAgent(enabled: Bool) async -> (ok: Bool, output: String) {
+    await run(enabled ? "Enabling the agent…" : "Disabling the agent…") { await lab(["agent", enabled ? "on" : "off"]) }
+  }
 }
