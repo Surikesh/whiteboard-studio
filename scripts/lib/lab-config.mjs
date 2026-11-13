@@ -36,6 +36,9 @@ export function labPaths(root = dataDir()) {
     shareIntent: path.join(root, "share", "enabled"),
     shareRestart: path.join(root, "share", "restart-requested"),
     shareState: path.join(root, "share", "state.json"),
+    // The user's board list and diagram specs, served over the demo ones in public/ (see workspace-overlay.mjs).
+    workspaceIndex: path.join(root, "workspace", "index.json"),
+    diagrams: path.join(root, "diagrams"),
   };
 }
 
@@ -90,7 +93,7 @@ export function saveConfig(config, paths = labPaths()) {
 }
 
 export function ensureDataDirs(paths = labPaths()) {
-  for (const dir of [paths.root, paths.state, paths.boards, paths.revisions, paths.assets, paths.bridge, paths.jobs, paths.share]) {
+  for (const dir of [paths.root, paths.state, paths.boards, paths.revisions, paths.assets, paths.bridge, paths.jobs, paths.share, path.dirname(paths.workspaceIndex), paths.diagrams]) {
     mkdirSync(dir, { recursive: true });
   }
   return paths;

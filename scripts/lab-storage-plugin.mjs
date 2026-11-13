@@ -5,6 +5,7 @@ import path from "node:path";
 import { ensureDataDirs, labPaths, loadConfig } from "./lib/lab-config.mjs";
 import { guestMayReadAsset } from "./lib/board-assets.mjs";
 import { canonicalPath, isLabPath, isRemoteRequest } from "./lib/remote-request.mjs";
+import { mergedIndex, resolveDiagramFile } from "./lib/workspace-overlay.mjs";
 import { ASSET_PREFIX, assetContentType, boardFileId, boardFileName, isBoardId, isSafeBasename, revisionFileName, revisionsToPrune, shouldWriteRevision, snapshotToTldr } from "./lib/lab-storage.mjs";
 
 const POLL_MS = 3000;
@@ -37,6 +38,28 @@ export function labStoragePlugin({ projectDir = process.cwd() } = {}) {
         const canonical = canonicalPath(req.url ?? "") ?? "";
         const isLab = isLabPath(canonical);
         const isAsset = url.pathname.startsWith(ASSET_PREFIX);
+        // The user's board list and specs (data directory) over the demo ones in public/. This computer only:
+        // tunnel and LAN guests get the plain public/ files, so they never see the user's board titles or specs.
+        if ((req.method === "GET" || req.method === "HEAD") && !isRemoteRequest(req)) {
+          try {
+            if (url.pathname === "/workspace/index.json") {
+              res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+              return res.end(JSON.stringify(mergedIndex(projectDir, paths)));
+            }
+            if (url.pathname.startsWith("/diagrams/")) {
+              const file = resolveDiagramFile(projectDir, paths, url.pathname);
+              if (file && file.startsWith(paths.diagrams + path.sep)) {
+                res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+                return res.end(readFileSync(file));
+              }
+              return next(); // demo files and 404s: the static public/ handler
+            }
+          } catch (error) {
+            warn("workspace overlay", error);
+            res.statusCode = 500;
+            return res.end("Error");
+          }
+        }
         if (!isLab && !isAsset) return next();
         const remote = isRemoteRequest(req); // any cf-connecting-ip header marks a guest (see remote-request.mjs)
         if (isLab && remote) {
@@ -128,8 +151,7 @@ export function labStoragePlugin({ projectDir = process.cwd() } = {}) {
       async function boardIds(base) {
         const ids = new Map();
         try {
-          const index = JSON.parse(readFileSync(path.join(projectDir, "public/workspace/index.json"), "utf8"));
-          for (const d of index) if (isBoardId(d?.id)) ids.set(d.id, d.title);
+          for (const d of mergedIndex(projectDir, paths)) if (isBoardId(d?.id)) ids.set(d.id, d.title);
         } catch {
           /* optional */
         }

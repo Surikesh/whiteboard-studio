@@ -81,9 +81,9 @@ Layers import in one direction: `ui` to `state` to `domain` to `io`. The browser
 
 ## Agent CLI
 
-The CLI keeps agent-created boards as source specs in the checkout: `public/diagrams/<id>.diagram.json` plus the index `public/workspace/index.json`, which the dev server serves to the app. The first time you open such a board, the app seeds its realtime room from the spec; after that the room, saved in the data directory, is the live copy. `patch` edits the source spec, so it only affects a board that has not been opened yet. To change an opened board, use the layout preflight below. Boards you create in the browser live only in the data directory. Documents are addressed by ID.
+The CLI keeps agent-created boards as source specs in the data directory: `diagrams/<id>.diagram.json` plus the index `workspace/index.json`. The dev server serves them to the app over the demo boards in `public/diagrams` and `public/workspace/index.json` (a user entry or spec with the same id or name wins), only to this computer: tunnel and LAN guests see just the demo list. The first time you open such a board, the app seeds its realtime room from the spec; after that the room, saved in the data directory, is the live copy. `patch` edits the source spec, so it only affects a board that has not been opened yet. To change an opened board, use the layout preflight below. Boards you create in the browser live only in the data directory. Documents are addressed by ID.
 
-The commands print links for the running app. They use `http://localhost:3000` by default; if `npm start` picked another port, set `WHITEBOARD_STUDIO_URL` to the URL it printed (the same variable is used by `npm run test:live`):
+The commands print links for the running app: the lab started with `npm run lab -- start` when it runs, otherwise `http://localhost:3000`. If `npm start` picked another port, set `WHITEBOARD_STUDIO_URL` to the URL it printed (the same variable is used by `npm run test:live`):
 
 ```bash
 export WHITEBOARD_STUDIO_URL=http://localhost:5173
@@ -91,10 +91,10 @@ npm run workspace -- list
 npm run workspace -- show <id>
 npm run workspace -- create public/diagrams/demo-web-architecture.diagram.json --title "My diagram" --project "demo"
 npm run workspace -- patch <id> patch.json
-npm run workspace -- open <id>           # opens the board in the default browser on macOS; add --print to only print the URL
+npm run workspace -- open <id>           # opens the board in the macOS app (whiteboardstudio:// link), else the browser; --print only prints the URL
 ```
 
-`create` needs a `whiteboard-studio/v1` spec; any file in `public/diagrams` is a working sample. The board title also becomes the heading on the canvas. `create` and `patch` write into the checkout (`public/diagrams/<id>.diagram.json` and `public/workspace/index.json`), so they show up in `git status`. `patch.json` accepts `metadata`, a full replacement `spec`, or incremental `addNodes` and `addEdges`, for example:
+`create` needs a `whiteboard-studio/v1` spec; any file in `public/diagrams` is a working sample. The board title also becomes the heading on the canvas. `create` and `patch` write only to the data directory, never into the checkout; patching a demo board stores your copy of its spec and an index entry that overrides the demo one. Saved specs are always written as `whiteboard-studio/v1`; the earlier `tldraw-lab/v1` id is still read. Set `WHITEBOARD_STUDIO_OPEN=browser` to make `open` skip the app. `patch.json` accepts `metadata`, a full replacement `spec`, or incremental `addNodes` and `addEdges`, for example:
 
 ```json
 {

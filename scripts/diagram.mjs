@@ -1,7 +1,9 @@
 #!/usr/bin/env node
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { basename, resolve } from "node:path";
 import { labBaseUrl } from "./lib/base-url.mjs";
+import { labPaths } from "./lib/lab-config.mjs";
+import { userDiagramFile } from "./lib/workspace-overlay.mjs";
 import { isSpecShape, normalizeSpec } from "../app/domain/spec/format.mjs";
 
 const [command, source, destination] = process.argv.slice(2);
@@ -47,9 +49,8 @@ if (spec.diagramType === "sequence") {
 }
 
 const safeName = (destination ?? basename(source, ".json")).replace(/\.diagram$/, "").replace(/[^a-zA-Z0-9._-]+/g, "-");
-const directory = resolve("public/diagrams");
-const output = resolve(directory, `${safeName}.diagram.json`);
-await mkdir(directory, { recursive: true });
+// Saved specs belong to the user: they go to the data directory and are served as /diagrams/<name>.
+const output = userDiagramFile(labPaths(), `${safeName}.diagram.json`);
 await writeFile(output, `${JSON.stringify(normalizeSpec(spec), null, 2)}\n`);
 console.log(output);
 console.log(`${labBaseUrl()}/?diagram=/diagrams/${encodeURIComponent(`${safeName}.diagram.json`)}`);
